@@ -1,0 +1,24 @@
+Name: Anubhavnidhi Abhashkumar
+CSL-ID: anubhavnidhi
+
+Implementation Details:
+			To count the number of process running in xv6, I have to go through the ptable and count all the processes which are not in unused state.
+                        For this program, I had to do changes to the following files: include/syscall.h, user/user.h, user/usys.S, kernel/sysfunc.h, kernel/syscall.c, kernel/sysproc.c, kernel/proc.h and kernel/proc.c. Most of it was done by seeing how getpid was implemented.
+
+In include/syscall.h, I added the system call number for SYS_getprocs
+
+In user/user.h, I added the definition for the system call getprocs()
+
+In user/usys.S, I added SYSCALL(getprocs). This file is responsible for doing an interrupt and specifying which system call to execute (converts to sys_getprocs).
+
+In kernel/sysfunc.h, I added the definition for the system call sys_getprocs()
+
+I added the function pointer (for sys_getprocs) to the array of function pointers in kernel/syscall.c. This is responsible for trap handling.
+
+For this program I had to traverse the processes in ptable which is present in kernel/proc.c. So I create a function called num_process and call it from (kernel/sysproc.c) sys_getprocs()
+
+In kernel/proc.h, I write the definition for num_process()
+
+In num_process() at kernel/proc.c, I mimic the scheduler() function. I initialize a counter to 0 and go through the processes in ptable where I increment the counter if the process is not in unused state and finally return the counter value.
+
+Like mentioned on piazza, if the state of proc is neither of the following: UNUSED, RUNNING, RUNNABLE, EMBRYO, SLEEPING, ZOMBIE then I return -1. Also if init, sh processes are not present I return -1. 
