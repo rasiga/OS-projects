@@ -6,6 +6,10 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#include "pstat.h"
+#define MAXTICKETS 150
+#define MINTICKETS 10
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -98,9 +102,39 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+	
+  //process stride and pass value
+  p->tickets = 10;
+  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  p->pass = 0;
   release(&ptable.lock);
 }
-
+int 
+fill_pstat(struct pstat* p)
+{
+	struct proc* currproc;
+	int i=0;
+	acquire(&ptable.lock);
+	for(currproc=ptable.proc;currproc<&ptable.proc[NPROC];currproc++)
+	{
+		if(currproc->state!=UNUSED)
+		{
+			p[i].inuse = 1;
+		}
+		else
+		{
+			p[i].inuse = 0;
+		}
+		p[i].pid = currproc->pid;
+		safestrcpy(p[i].name,currproc->name,strlen(p[i].name));
+		p[i].tickets = currproc->tickets;
+		p[i].stride = currproc->stride;
+		p[i].pass = currproc->pass;
+		p[i].n_schedule = currproc->n_schedule;
+	}
+	release(&ptable.lock);
+	return 0;
+}
 // Grow current process's memory by n bytes.
 // Return 0 on success, -1 on failure.
 int
@@ -244,7 +278,32 @@ wait(void)
     sleep(proc, &ptable.lock);  //DOC: wait-sleep
   }
 }
-
+/*stride scheduling policy
+walks through the ptable to find process with the minimum pass value. If all processes are sleeping then returns NULL
+*/
+struct proc* stride_scheduler()
+{
+	struct proc *p,*pselected;
+	int min_pass = 10000;
+	acquire(&ptable.lock);
+	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
+	{
+		if(p->state != RUNNABLE)
+		{
+			continue;
+		}
+		else
+		{
+			if(p->pass < min_pass)
+			{
+			  	pselected = p;
+				min_pass = p->pass;
+			}
+		}
+	}
+	release(&ptable.lock);
+	return pselected;
+}
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -261,27 +320,27 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    // select the process to be run (one with minimum pass value)
+	p  = stride_scheduler();
+	if(p!=NULL)
+	{
+		p->pass += p->stride;// update the pass value
+	
+		// Switch to chosen process.  It is the process's job
+      		// to release ptable.lock and then reacquire it
+      		// before jumping back to us.
+      		proc = p;
+      		switchuvm(p);
+     		p->state = RUNNING;
+      		swtch(&cpu->scheduler, proc->context);
+      		switchkvm();
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
-    }
-    release(&ptable.lock);
-
+		//update the # times process is scheduled
+		p->n_schedule++;
+      		// Process is done running for now.
+     		// It should have changed its p->state before coming back.
+      		proc = 0;
+   	}
   }
 }
 
@@ -324,7 +383,6 @@ int num_process(void)
 		return -1;
 	return count;
 }
-
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state.

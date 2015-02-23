@@ -6,6 +6,10 @@
 #include "proc.h"
 #include "sysfunc.h"
 
+#include "pstat.h"
+#define MAXTICKETS 150
+#define MINTICKETS 10
+
 int
 sys_fork(void)
 {
@@ -96,3 +100,26 @@ sys_getprocs(void)
 	return  num_process();
 }
 
+int
+sys_settickets(void)
+{
+	int num_tickets;
+	if(argint(0,&num_tickets)<0)
+		return -1;
+	if(num_tickets < MINTICKETS || num_tickets > MAXTICKETS || num_tickets%10 !=0)
+	{
+		return -1;
+	}
+	proc->tickets = num_tickets;
+	proc->stride = (MAXTICKETS+MINTICKETS-num_tickets)/10;
+	return 0;	
+}
+
+int
+sys_getpinfo(void)
+{
+	void *p;
+	if(argptr(0,(char**)&p,sizeof(p))<0)
+		return -1;
+	return fill_pstat(p);
+}
