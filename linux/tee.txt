@@ -1,0 +1,8 @@
+makefile
+mysh
+mysh.c
+mytee
+mytee.c
+README
+tee.txt
+e.tx

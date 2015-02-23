@@ -83,6 +83,7 @@ struct proc {
 
 int num_process(void);
 int fill_pstat(struct pstat*);
+struct proc* stride_scheduler();
 int cmp(char[],char[]);
 // Process memory is laid out contiguously, low addresses first:
 //   text

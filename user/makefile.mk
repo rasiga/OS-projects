@@ -18,7 +18,7 @@ USER_PROGS := \
 	wc\
 	zombie\
 	archie\
-	settickettest
+	settickettest\
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
