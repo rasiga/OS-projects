@@ -48,11 +48,6 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->tickets = 10;
-  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
-  p->pass = 0;
-  p->n_schedule=0;
-  
   release(&ptable.lock);
 
   // Allocate kernel stack if possible.
@@ -108,10 +103,10 @@ userinit(void)
   p->state = RUNNABLE;
 
 //process stride and pass value
- // p->tickets = 10;
- // p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
- // p->pass = 0;
- // p->n_schedule=0;
+  p->tickets = 10;
+  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  p->pass = 0;
+  p->n_schedule=0;
   
   release(&ptable.lock);
 }
