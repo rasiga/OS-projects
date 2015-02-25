@@ -3,13 +3,14 @@
 #include "user.h"
 #include "syscall.h"
 #include "pstat.h"
-/*
+
 void sample()
 {
 	int rc,i; 
-	rc = fork();	
+	//rc = fork();	
 	for(i=0;i<4;i++)
 	{
+		rc = fork();
 		if(rc==0)
 		{
 			if(i%2==0)
@@ -24,7 +25,7 @@ void sample()
 			}
 		}
 	}	
-}*/
+}
 int main()
 {
 	int i=0;
@@ -33,7 +34,7 @@ int main()
 	if(p==NULL)
 		exit();
 	printf(1,"parent pid%d\n",getpid());
-	//sample();
+	sample();
 	if(getpinfo(p)<0)
 			exit();
 		

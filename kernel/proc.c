@@ -269,10 +269,10 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-/*
+
 struct proc* stride_scheduler()
 {
-	struct proc *p,*pselected;
+	struct proc *p,*pselected = NULL;
 	int min_pass = 10000;
 	//acquire(&ptable.lock);
 	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
@@ -293,8 +293,7 @@ struct proc* stride_scheduler()
 	//release(&ptable.lock);
 	return pselected;
 }
-*/
-/*
+
 void
 scheduler(void)
 {
@@ -333,9 +332,9 @@ scheduler(void)
 
   }
 }
-*/
 
 
+/*
 void
 scheduler(void)
 {
@@ -368,7 +367,7 @@ scheduler(void)
 
   }
 }
-
+*/
 
 
 
