@@ -34,10 +34,7 @@ pinit(void)
 int findmin(void)
 {
 	struct proc *p;
-	acquire(&ptable.lock);
-
-
-        int min_pass = 2000000000;
+	int min_pass = 2000000000;
 	
 	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
 	{
@@ -54,11 +51,10 @@ int findmin(void)
 		}		
 		
 	}
-	release(&ptable.lock);
-
 	return min_pass;
 	
 }
+
 
 /*************************************************************************************************/
 
@@ -215,8 +211,10 @@ fork(void)
   safestrcpy(np->name, proc->name, sizeof(proc->name));
   np->tickets = 10;
   np->stride = (MAXTICKETS+MINTICKETS -(np->tickets))/10; //default value
-  np->pass = 0;
-  //np->pass = findmin();
+  //np->pass = 0;
+  acquire(&ptable.lock);
+  np->pass = findmin();
+  release(&ptable.lock);
   np->n_schedule=0;
   
   return pid;
@@ -336,6 +334,7 @@ struct proc* stride_scheduler()
 			}
 		}
 	}
+        //minpassvalue=min_pass;
 	//release(&ptable.lock);
 	return pselected;
 }
@@ -560,13 +559,18 @@ static void
 wakeup1(void *chan)
 {
   struct proc *p;
-
+  int x;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
     if(p->state == SLEEPING && p->chan == chan)
     {
       p->state = RUNNABLE;
-      //p->pass = findmin();
+      x=findmin();
+      if(x!=0)
+	p->pass=x;
     }
+  }
+  
 }
 
 // Wake up all processes sleeping on chan.
