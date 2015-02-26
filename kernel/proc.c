@@ -28,6 +28,46 @@ pinit(void)
   initlock(&ptable.lock, "ptable");
 }
 
+
+
+/*************************************************************************************************/
+int findmin(void)
+{
+	struct proc *p;
+	acquire(&ptable.lock);
+
+
+        int min_pass = 2000000000;
+	
+	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
+	{
+		if(p->state != RUNNABLE)
+		{
+			continue;
+		}
+		else
+		{
+			if(p->pass < min_pass)
+			{
+			  	min_pass = p->pass;
+			}
+		}		
+		
+	}
+	release(&ptable.lock);
+
+	return min_pass;
+	
+}
+
+/*************************************************************************************************/
+
+
+
+
+
+
+
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
@@ -48,10 +88,10 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->tickets = 10;
+ /* p->tickets = 10;
   p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
   p->pass = 0;
-  p->n_schedule=0;
+  p->n_schedule=0;*/
   
   release(&ptable.lock);
 
@@ -173,6 +213,12 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+  np->tickets = 10;
+  np->stride = (MAXTICKETS+MINTICKETS -(np->tickets))/10; //default value
+  //np->pass = 0;
+  np->pass = findmin();
+  np->n_schedule=0;
+  
   return pid;
 }
 
@@ -273,7 +319,7 @@ wait(void)
 struct proc* stride_scheduler()
 {
 	struct proc *p,*pselected = NULL;
-	int min_pass = 10000;
+	int min_pass = 2000000000;
 	//acquire(&ptable.lock);
 	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
 	{
@@ -294,6 +340,20 @@ struct proc* stride_scheduler()
 	return pselected;
 }
 
+
+
+void setpasszero(void)
+{
+	struct proc *p;
+	//acquire(&ptable.lock);
+	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
+	{
+		p->pass=0;
+		
+	}
+	
+}
+
 void
 scheduler(void)
 {
@@ -310,7 +370,10 @@ scheduler(void)
 	if(p!=NULL)
 	{
 		p->pass += p->stride;// update the pass value
-	
+		if(p->pass>=2000000000)
+		{
+			setpasszero();
+		}
 		// Switch to chosen process.  It is the process's job
       		// to release ptable.lock and then reacquire it
       		// before jumping back to us.
@@ -500,7 +563,10 @@ wakeup1(void *chan)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
+    {
       p->state = RUNNABLE;
+      //p->pass = findmin();
+    }
 }
 
 // Wake up all processes sleeping on chan.
