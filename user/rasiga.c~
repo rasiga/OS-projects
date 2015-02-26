@@ -41,7 +41,7 @@ void sample()
 }
 int main()
 {
-	int i=0,j=0,temp=0,sum=0;
+	int i=0,j=0,temp=0,sum=0,rc;
 	struct pstat *p = NULL;
 	p = (struct pstat*)malloc(sizeof(struct pstat)*64);
 	if(p==NULL)
@@ -61,6 +61,8 @@ int main()
 			{
 				for(temp=0;;temp++)
 				{
+				//	if(temp==200)
+				//		sleep(2000);
 					sum+=temp; 
 				}
 				exit();

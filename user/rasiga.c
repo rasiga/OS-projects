@@ -61,6 +61,8 @@ int main()
 			{
 				for(temp=0;;temp++)
 				{
+					if(temp==200)
+						sleep(2000);
 					sum+=temp; 
 				}
 				exit();

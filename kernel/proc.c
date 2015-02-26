@@ -566,8 +566,8 @@ wakeup1(void *chan)
     {
       p->state = RUNNABLE;
       x=findmin();
-      if(x!=0)
-	p->pass=x;
+     if(x>0)
+     	p->pass=x;
     }
   }
   

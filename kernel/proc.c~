@@ -144,10 +144,10 @@ userinit(void)
   p->state = RUNNABLE;
 
 //process stride and pass value
- // p->tickets = 10;
- // p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
- // p->pass = 0;
- // p->n_schedule=0;
+  p->tickets = 10;
+  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  p->pass = 0;
+  p->n_schedule=0;
   
   release(&ptable.lock);
 }
@@ -566,8 +566,8 @@ wakeup1(void *chan)
     {
       p->state = RUNNABLE;
       x=findmin();
-      if(x!=0)
-	p->pass=x;
+     // if(x!=0)
+     //	p->pass=x;
     }
   }
   
