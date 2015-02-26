@@ -6,25 +6,36 @@
 
 void sample()
 {
-	int rc,i; 
+	int rc,i,temp,sum; 
 	//rc = fork();	
 	for(i=0;i<4;i++)
 	{
+		
 		rc = fork();
 		if(rc==0)
 		{
-			if(i%2==0)
+			sum=0;
+			if((i%2)==0)
 			{
 				if(settickets(100)<0)
+				{
+					printf(1,"\nError in set");
 					exit();
+				}
 			}
 			else
 			{
-				if(settickets(100)<0)
+				if(settickets(50)<0)
+				{
+					printf(1,"\nError in set");				
 					exit();
+				}
 			}
+			for(temp=0;;temp++)
+			{	sum+=temp; }
+			exit();
 		}
-	}	
+	}		
 }
 int main()
 {
@@ -35,11 +46,12 @@ int main()
 		exit();
 	printf(1,"parent pid%d\n",getpid());
 	sample();
-	if(getpinfo(p)<0)
-			exit();
 		
 	while(1)
 	{
+		if(getpinfo(p)<0)
+			exit();
+	
 		for(i=0;i<64;i++) //to get the process info of all 64 processes in the system
 		{
 			if(p[i].inuse == 1)
