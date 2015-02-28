@@ -110,7 +110,8 @@ sys_settickets(void)
 		return -1;
 	}
 	proc->tickets = num_tickets;
-	proc->stride = (MAXTICKETS+MINTICKETS-num_tickets)/10;
+	//proc->stride = (MAXTICKETS+MINTICKETS-num_tickets)/10;
+        proc->stride = 277200/num_tickets;
 	return 0;	
 }
 

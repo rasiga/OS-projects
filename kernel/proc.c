@@ -6,8 +6,8 @@
 #include "proc.h"
 #include "spinlock.h"
 #include "pstat.h"
-#define MAXTICKETS 150
-#define MINTICKETS 10
+//#define MAXTICKETS 150
+//#define MINTICKETS 10
 
 struct {
   struct spinlock lock;
@@ -17,6 +17,7 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+int minpassnew=10;
 extern void forkret(void);
 extern void trapret(void);
 
@@ -30,7 +31,7 @@ pinit(void)
 
 
 
-/*************************************************************************************************/
+/* ************************************************************************************************
 int findmin(void)
 {
 	struct proc *p;
@@ -51,12 +52,13 @@ int findmin(void)
 		}		
 		
 	}
+        minpassnew=min_pass;
 	return min_pass;
 	
 }
 
 
-/*************************************************************************************************/
+************************************************************************************************ */
 
 
 
@@ -84,10 +86,14 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
- /* p->tickets = 10;
-  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  p->tickets = 10;
+  p->stride = (277200)/p->tickets; //default value
   p->pass = 0;
-  p->n_schedule=0;*/
+  p->n_schedule=0;
+  if(minpassnew!=0&&minpassnew!=2000000000)
+	p->pass=minpassnew;
+  else
+  	p->pass = 0;
   
   release(&ptable.lock);
 
@@ -144,11 +150,11 @@ userinit(void)
   p->state = RUNNABLE;
 
 //process stride and pass value
+
   p->tickets = 10;
-  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  p->stride = (277200)/ p->tickets;
   p->pass = 0;
   p->n_schedule=0;
-  
   release(&ptable.lock);
 }
 
@@ -210,13 +216,17 @@ fork(void)
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
   np->tickets = 10;
-  np->stride = (MAXTICKETS+MINTICKETS -(np->tickets))/10; //default value
+  np->stride = (277200)/ np->tickets;
+  
   //np->pass = 0;
-  acquire(&ptable.lock);
-  np->pass = findmin();
-  release(&ptable.lock);
   np->n_schedule=0;
   
+  //np->stride = (MAXTICKETS+MINTICKETS -(np->tickets))/10; //default value
+ if(minpassnew!=0&&minpassnew!=2000000000)
+	np->pass=minpassnew;
+  else
+  	np->pass = 0;
+
   return pid;
 }
 
@@ -318,7 +328,6 @@ struct proc* stride_scheduler()
 {
 	struct proc *p,*pselected = NULL;
 	int min_pass = 2000000000;
-	//acquire(&ptable.lock);
 	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
 	{
 		if(p->state != RUNNABLE)
@@ -334,8 +343,7 @@ struct proc* stride_scheduler()
 			}
 		}
 	}
-        //minpassvalue=min_pass;
-	//release(&ptable.lock);
+        minpassnew=min_pass;
 	return pselected;
 }
 
@@ -344,7 +352,6 @@ struct proc* stride_scheduler()
 void setpasszero(void)
 {
 	struct proc *p;
-	//acquire(&ptable.lock);
 	for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
 	{
 		p->pass=0;
@@ -358,6 +365,16 @@ scheduler(void)
 {
   struct proc *p;
 
+  acquire(&ptable.lock);
+  
+  for(p=ptable.proc;p<&ptable.proc[NPROC];p++)
+  {
+	p->pass=0;	
+  }
+  minpassnew=0;
+  setpasszero();
+  release(&ptable.lock);
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
@@ -368,7 +385,6 @@ scheduler(void)
 	p  = stride_scheduler();
 	if(p!=NULL)
 	{
-		p->pass += p->stride;// update the pass value
 		if(p->pass>=2000000000)
 		{
 			setpasszero();
@@ -376,15 +392,17 @@ scheduler(void)
 		// Switch to chosen process.  It is the process's job
       		// to release ptable.lock and then reacquire it
       		// before jumping back to us.
-      		proc = p;
+		//cprintf("minpass value in Scheduler %d\n",minpassnew);
+		proc = p;
       		switchuvm(p);
      		p->state = RUNNING;
       		swtch(&cpu->scheduler, proc->context);
       		switchkvm();
 
-		//update the # times process is scheduled
 		p->n_schedule++;
-      		// Process is done running for now.
+		p->pass += p->stride;// update the pass value		
+		//update the # times process is scheduled
+		// Process is done running for now.
      		// It should have changed its p->state before coming back.
       		
    	}
@@ -559,15 +577,20 @@ static void
 wakeup1(void *chan)
 {
   struct proc *p;
-  int x;
+  //int x;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if(p->state == SLEEPING && p->chan == chan)
     {
       p->state = RUNNABLE;
-      x=findmin();
-     if(x>0)
-     	p->pass=x;
+      if(minpassnew!=0&&minpassnew!=2000000000)
+		p->pass=minpassnew;
+  	else
+  		p->pass = 0;
+  
+     /*if(minpassnew!=2000000000&&minpassnew!=0)
+		p->pass=minpassnew;*/
+	//cprintf("%d\n",minpassnew);
     }
   }
   

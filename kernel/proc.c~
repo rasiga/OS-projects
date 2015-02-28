@@ -6,8 +6,8 @@
 #include "proc.h"
 #include "spinlock.h"
 #include "pstat.h"
-#define MAXTICKETS 150
-#define MINTICKETS 10
+//#define MAXTICKETS 150
+//#define MINTICKETS 10
 
 struct {
   struct spinlock lock;
@@ -31,7 +31,7 @@ pinit(void)
 
 
 /*************************************************************************************************/
-int findmin(void)
+/*int findmin(void)
 {
 	struct proc *p;
 	int min_pass = 2000000000;
@@ -53,7 +53,7 @@ int findmin(void)
 	}
 	return min_pass;
 	
-}
+}*/
 
 
 /*************************************************************************************************/
@@ -145,7 +145,8 @@ userinit(void)
 
 //process stride and pass value
   p->tickets = 10;
-  p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  //p->stride = (MAXTICKETS+MINTICKETS -(p->tickets))/10; //default value
+  p->stride = (1000)/ p->tickets;
   p->pass = 0;
   p->n_schedule=0;
   
@@ -210,10 +211,13 @@ fork(void)
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
   np->tickets = 10;
-  np->stride = (MAXTICKETS+MINTICKETS -(np->tickets))/10; //default value
+  np->stride = (1000)/ np->tickets;
+  
+  //np->stride = (MAXTICKETS+MINTICKETS -(np->tickets))/10; //default value
   //np->pass = 0;
   acquire(&ptable.lock);
-  np->pass = findmin();
+  //np->pass = findmin();
+  np->pass = 0;
   release(&ptable.lock);
   np->n_schedule=0;
   
@@ -368,7 +372,6 @@ scheduler(void)
 	p  = stride_scheduler();
 	if(p!=NULL)
 	{
-		p->pass += p->stride;// update the pass value
 		if(p->pass>=2000000000)
 		{
 			setpasszero();
@@ -383,6 +386,7 @@ scheduler(void)
       		switchkvm();
 
 		//update the # times process is scheduled
+		p->pass += p->stride;// update the pass value		
 		p->n_schedule++;
       		// Process is done running for now.
      		// It should have changed its p->state before coming back.
@@ -559,15 +563,15 @@ static void
 wakeup1(void *chan)
 {
   struct proc *p;
-  int x;
+ // int x;
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if(p->state == SLEEPING && p->chan == chan)
     {
       p->state = RUNNABLE;
-      x=findmin();
-     // if(x!=0)
-     //	p->pass=x;
+      /*x=findmin();
+     if(x>0)
+     	p->pass=x;*/
     }
   }
   

@@ -124,5 +124,5 @@ sys_getpinfo(void)
 	if(argptr(0,(char**)&p,sizeof(p))<0)
 		return -1;
 
-	return fill_pstat(t);
+	return fill_pstat(p);
 }
