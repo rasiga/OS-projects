@@ -41,13 +41,17 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 }
 void * Mem_Alloc(int size)
 {
-	/*int assigned=0;
+	int assigned=0;
 	if(size<slabvalue)
 	{
 
 	}
 	if(assigned==0)
-	{*/
+	{
+		if(size%16!=0)
+		{
+			size=size+(size%16);
+		}
 		int magicvalue=MAGIC;
 		int currsize=head->length;
 		struct FreeHeader* newfree;
@@ -60,8 +64,8 @@ void * Mem_Alloc(int size)
                 head->length=currsize-size-sizeof(head);
               
 		return (process+sizeof(process));		
-	//}
-
+	}
+	return NULL;
 
 }
 int Mem_Free(void *ptr)
