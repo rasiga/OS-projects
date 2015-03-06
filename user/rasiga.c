@@ -41,7 +41,7 @@ void sample()
 }
 int main()
 {
-	int i=0;//,j=0,temp=0,sum=0,rc;
+	int i=0,j=0,temp=0,sum=0,rc;
 	struct pstat *p = NULL;
 	p = (struct pstat*)malloc(sizeof(struct pstat)*64);
 	if(p==NULL)
@@ -53,22 +53,22 @@ int main()
 	{
 		if(getpinfo(p)<0)
 			exit();
-	        /*j++;
-		if(j==15)
+	        j++;
+		if(j==9)
 		{
 			rc = fork();
 			if(rc==0)
 			{
 				for(temp=0;;temp++)
 				{
-					if(temp==200)
+					if(temp==18)
 						sleep(2000);
 					sum+=temp; 
 				}
 				exit();
 			}
 		
-		}*/
+		}
 		for(i=0;i<64;i++) //to get the process info of all 64 processes in the system
 		{
 			if(p[i].inuse == 1)
