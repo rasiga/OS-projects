@@ -37,9 +37,9 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 		{
 			void ** nextpart=temp+slabvalue-8;
 			*nextpart=temp+slabvalue;
-			/*void * x1=temp+slabvalue;
-			void **x2=temp+slabvalue-8;
-			printf("Value at nextpart %p | %p\n",x1,*x2);*/
+			//void * x1=temp+slabvalue;
+			//void **x2=temp+slabvalue-8;
+			//printf("Value at nextpart %p | %p\n",x1,*x2);
 			//void *print=temp+slabvalue-8;;
 			temp=temp+slabvalue;
 		}
@@ -66,12 +66,9 @@ void * Mem_Alloc(int size)
                 temp=temp+slabvalue;
 		slabhead=temp;
 		assigned=1;
-		void *temp2=slabhead;
-                temp2=temp2+slabvalue-8;
-		struct FreeHeader **x;
-		x=temp;
-		//slabhead=*x;
-		printf("Content at slabhead %p\n",(*x));
+                void **x=temp-8;
+		slabhead=*x;
+		//printf("Content at slabhead %p\n",(*x));
 		bzero(new,slabvalue);
 		return new;
                 
