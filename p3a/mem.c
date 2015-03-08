@@ -58,7 +58,7 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 void * Mem_Alloc(int size)
 {
 	int assigned=0;
-	if(size==slabvalue)
+	if(size==slabvalue&&slabhead!=NULL)
 	{	
 		// incomplete here
 		void *temp=slabhead;
