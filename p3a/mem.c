@@ -142,15 +142,19 @@ int Mem_Free(void *ptr)
 	else
 	{
 		struct FreeHeader *newfreed;
-		ptr - sizeof(struct AllocatedHeader)
-		//set the length=length of process and next=NULL 
-		
+		struct AllocatedHeader *oldalloc;
+		void *holder = ptr - sizeof(struct AllocatedHeader);
+		oldalloc = (struct AllocatedHeader*)holder;
+		newfreed = (struct FreeHeader*)holder;
+		newfreed->length = oldalloc->length;
+		newfreed->next = NULL;
+				
 		void *p = nextfithead;
 		while(p->next!=NULL)
 		{
 			p = p->next;
 		}	
-		p->next = ;//newly freed space		
+		p->next = newfreed - sizeof(struct FreeHeader);//newly freed space		
 	}
 	return 0;
 }
