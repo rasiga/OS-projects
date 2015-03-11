@@ -6,7 +6,9 @@
 #include<sys/types.h>
 #include<sys/stat.h>
 #include<sys/mman.h>
+#include<pthread.h>
 #include "mymem.h"
+
 
 int slabvalue; //size of each slab region
 int done=0; //mem_init flag variable
@@ -14,9 +16,14 @@ int nextfitsize,slabmemory,totalsize; // size of memory given to next fit and sl
 struct FreeHeader * nextfithead, *slabhead;
 struct AllocatedHeader * process;
 void* ASstart;
+pthread_mutex_t lock;
 void * Mem_Init(int sizeOfRegion, int slabSize)
 {
-
+	if(pthread_mutex_init(&lock, NULL) != 0)
+    	{
+        	printf("\n mutex init failed\n");
+        	return NULL;
+    	}
 	if(done==0) // make sure mem_init called only once
 	{
 		int i;
@@ -57,14 +64,12 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 		done = 1; // setting the flag to ensure that free space is allocated only once
 		return ptr;
 	}
-	else // if mem_init is called more than once
-	{
 		return NULL;
-	}
 
 }
 void * Mem_Alloc(int size)
 {
+	pthread_mutex_lock(&lock);
 	int assigned = 0;
 	//if the requested size is equal to slab size and if there is atleast ine free slab, then allocated in slab region
 	if(size == slabvalue && slabhead != NULL)
@@ -79,6 +84,7 @@ void * Mem_Alloc(int size)
 		slabhead = *x;
 		//printf("Content at slabhead %p\n",(*x));
 		bzero(new,slabvalue);
+		pthread_mutex_unlock(&lock);
 		return new;
                 
 	}
@@ -93,7 +99,8 @@ void * Mem_Alloc(int size)
 		int currsize = nextfithead->length;
 		if(currsize >= size)
 		{
-			process = (struct AllocatedHeader*)nextfithead;		
+			process = (struct AllocatedHeader*)nextfithead;
+			//printf(" process val %p\n",process);		
 			process->length = size;
 			process->magic = &magicvalue;
 			void *temp = nextfithead;
@@ -101,28 +108,35 @@ void * Mem_Alloc(int size)
 			nextfithead = temp;
 			nextfithead->next = NULL;
                 	nextfithead->length = currsize - size - sizeof(struct AllocatedHeader);
-			return (process+sizeof(struct AllocatedHeader));	
+			//printf("Process %p sizeof value %ld\n",process,sizeof(struct AllocatedHeader));
+			void *p=process;
+			pthread_mutex_unlock(&lock);
+			return (p+sizeof(struct AllocatedHeader));	
 		}
 		else
 		{
 			//logic to go through the free list from current location in list
 		}
 	}
-		return NULL;
+	pthread_mutex_unlock(&lock);
+	return NULL;
 
 }
 int Mem_Free(void *ptr)
 {
+	pthread_mutex_lock(&lock);
 	int slabflag = 0;
 	if(ptr == NULL)
 	{
 		//do nothing
+		pthread_mutex_unlock(&lock);
 		return 0;
 	}
-	printf("%p  --  %p\n",ptr,(ASstart+totalsize));
+	//printf("%p  --  %p\n",ptr,(ASstart+totalsize));
 	if(ptr > (ASstart + totalsize) || ptr<ASstart) //check if ptr is within the mmaped region
 	{
 		printf("SEGFAULT\n");
+		pthread_mutex_unlock(&lock);
 		return -1;
 	}
 	//determine if ptr points to slab or next fit
@@ -145,11 +159,10 @@ int Mem_Free(void *ptr)
 	else
 	{
 		struct FreeHeader *newfreed;
-		struct AllocatedHeader *oldalloc;
+		//struct AllocatedHeader *oldalloc;
 		void *holder = ptr - sizeof(struct AllocatedHeader);
-		oldalloc = (struct AllocatedHeader*)holder;
+		//oldalloc = (struct AllocatedHeader*)holder;
 		newfreed = (struct FreeHeader*)holder;
-		newfreed->length = oldalloc->length;
 		newfreed->next = NULL;
 				
 		struct FreeHeader *p = nextfithead;
@@ -157,13 +170,14 @@ int Mem_Free(void *ptr)
 		{
 			p = p->next;
 		}	
-		p->next = newfreed - sizeof(struct FreeHeader);//newly freed space		
+		p->next = newfreed;//- sizeof(struct FreeHeader);//newly freed space		
 	}
+	pthread_mutex_unlock(&lock);
 	return 0;
 }
 void Mem_Dump()
 {
-	printf("Head length is %d Head is %p Slabhead is %p\n",nextfithead->length,nextfithead,slabhead);
+	printf("Head length is %d Head is %p Slabhead is %p NextfitHead->next %p\n",nextfithead->length,nextfithead,slabhead,nextfithead->next);
 	return;
 }
 
