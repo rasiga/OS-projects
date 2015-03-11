@@ -107,6 +107,7 @@ void * Mem_Alloc(int size)
 		{
 			//logic to go through the free list from current location in list
 		}
+	}
 		return NULL;
 
 }
@@ -126,17 +127,17 @@ int Mem_Free(void *ptr)
 	//determine if ptr points to slab or next fit
 	if(ptr <= (ASstart + slabmemory))
 	{
-		slabfalg = 1;
+		slabflag = 1;
 	}
 	//freeing ptr from slab
 	if(slabflag ==1)
 	{
 		//make this ptr nextfree to point to what slabhead was pointing to before
-		void **p = ptr + slabvalue - 8;
-		*p = *slabhead;
-		
+		void *p = ptr + slabvalue - 8;
+		*p = *slabhead;	
 		//make slabhead point to this newly freed slab
-		slabhead = *p;
+		slabhead = p;
+
 	}
 	//freeing ptr in nextfit
 	else
@@ -149,7 +150,7 @@ int Mem_Free(void *ptr)
 		newfreed->length = oldalloc->length;
 		newfreed->next = NULL;
 				
-		void *p = nextfithead;
+		struct FreeHeader *p = nextfithead;
 		while(p->next!=NULL)
 		{
 			p = p->next;
