@@ -119,7 +119,8 @@ int Mem_Free(void *ptr)
 		//do nothing
 		return 0;
 	}
-	if(ptr < (ASstart + totalsize)) //check if ptr is within the mmaped region
+	printf("%p  --  %p\n",ptr,(ASstart+totalsize));
+	if(ptr > (ASstart + totalsize) || ptr<ASstart) //check if ptr is within the mmaped region
 	{
 		printf("SEGFAULT\n");
 		return -1;
@@ -133,10 +134,11 @@ int Mem_Free(void *ptr)
 	if(slabflag ==1)
 	{
 		//make this ptr nextfree to point to what slabhead was pointing to before
-		void *p = ptr + slabvalue - 8;
-		*p = *slabhead;	
+		void **p = ptr + slabvalue - 8;
+		void *pp=ptr;
+		*p = slabhead;	
 		//make slabhead point to this newly freed slab
-		slabhead = p;
+		slabhead = pp;
 
 	}
 	//freeing ptr in nextfit
