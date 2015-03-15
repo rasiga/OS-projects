@@ -1,16 +1,13 @@
 all: main
 
 main: main.c libmem.so
-	gcc -lmem -L . -o main main.c -Wall -Werror -pthread
+	gcc -g -lmem -L . -o main main.c -Wall -Werror
 
 libmem.so: mem.o
-	gcc -shared -o libmem.so mem.o -Wall -Werror -pthread
+	gcc  -shared -o libmem.so mem.o
 
 mem.o: mem.c
-	gcc -c -fpic mem.c -o mem.o -Wall -Werror -pthread
+	gcc -c -fpic mem.c -Wall -Werror
 
 clean:
-	rm -rf *.so *.o main
-
-
-
+	rm -rf *.so *.o main 

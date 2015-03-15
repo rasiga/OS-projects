@@ -6,7 +6,7 @@
 int slabvalue=0; //size of each slab region
 int done=0; //mem_init flag variable
 int /*nextfitsize=0,slabmemory=0,*/totalsize=0; // size of memory given to next fit and slab allocator (75% and 25% of free space respectively)
-struct FreeHeader * nextfithead=NULL, *slabhead=NULL, *nextfit=NULL;
+struct FreeHeader * nextfithead=NULL, *slabhead=NULL;
 void* ASstart=NULL;
 void *magic=NULL;
 int magicval=MAGIC;
@@ -19,15 +19,13 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 		totalsize = sizeOfRegion;
 		//nextfitsize=sizeOfRegion * 0.75; // allocate size
 		//slabmemory=sizeOfRegion * 0.25;
-		void *ptr = mmap(NULL, sizeOfRegion, PROT_READ|PROT_WRITE,MAP_ANON|MAP_PRIVATE, -1, 0);
+		void *ptr = mmap(NULL, sizeOfRegion+100, PROT_READ|PROT_WRITE,MAP_ANON|MAP_PRIVATE, -1, 0);
 		ASstart = ptr;
 		//initializing nextfithead
 		nextfithead = ptr+(int)(totalsize*0.25);
 		nextfithead->next = NULL;
 		nextfithead->length = sizeOfRegion-sizeof(struct FreeHeader)-(totalsize*0.25);
-		//next fit pointer initialization
-		nextfit = nextfithead;
-		
+		//initializing slabhead and slabvalue
 		slabvalue = slabSize;
 		slabhead = ptr;
 		if(ptr == MAP_FAILED)
@@ -55,16 +53,12 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 		return NULL;
 
 }
-/***********************************************************************************************************************************************************
- * Mem_Alloc
- * ******************************************************************************************************************************************************************************/
 void * Mem_Alloc(int size)
 {
-	//to check if mem_init has been called
+
 	if(done==0)
 		return NULL;
-
-	int assigned = 0;// to check if allocated in slab region
+	int assigned = 0;
 	if(size == slabvalue && slabhead != NULL)
 	{
 		void *temp = slabhead;
@@ -94,64 +88,33 @@ void * Mem_Alloc(int size)
                 if(currsize >= size)
                 {
                         struct AllocatedHeader* process = (struct AllocatedHeader*)nextfithead;
+                        process->length = size;
+                        process->magic = magic;
                         void *temp = nextfithead;
-                        //printf("\nComapare nextfithead and temp %p %p",temp,nextfithead);
+                        printf("\nComapare nextfithead and temp %p %p",temp,nextfithead);
 			temp = temp + size + sizeof(struct FreeHeader);
 			//void *temp2=temp;
 			
 			//if there is no free space in the next fit region
 			if((void*)nextfithead > (ASstart+totalsize))
 			{
-//				printf("Next fit head is null\n");
+				printf("Next fit head is null\n");
 				nextfithead=NULL;
 				nextfithead->next=NULL;
 				nextfithead->length=0;
 			}
 			else
 			{
-				struct FreeHeader* next=nextfithead->next;
-                                int cal = currsize - size - sizeof(struct FreeHeader);
-                                       
-                        	//nextfithead = temp;
-				if(next!=NULL)
-				{
-					if(cal<=0)
-					{
-						nextfithead=next;
-					}
-					else
-					{
-						
-						nextfithead=(struct FreeHeader*)temp;
-						nextfithead->length=cal;
-						nextfithead->next=next;
-
-					}
-				}
-				else
-				{
-					nextfithead=(struct FreeHeader*)temp;
-                                        nextfithead->length=cal;
-                                        nextfithead->next=NULL;
-
-				}
-		
+                        nextfithead = temp;
+                        nextfithead->next = NULL;
+                        nextfithead->length = currsize - size - sizeof(struct AllocatedHeader);
 			}
-			process->length = size;
-                        process->magic = magic;
                         void *p=process;
-			//
-			nextfit=(struct FreeHeader*)temp;
 			//printf("\nIn decimal %d",(temp-(ASstart+(int)(totalsize*0.25))));
 			//printf("Magic %x\n",*(int *)process->magic);
 			//printf("\nEnd memory %p\n",(ASstart+totalsize));
                         return (p+sizeof(struct AllocatedHeader));
                 }
-		else
-		{
-			//traverse list to find nextfit
-
-		}
 	 }
 	else
 		return NULL;

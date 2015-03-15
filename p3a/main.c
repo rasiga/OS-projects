@@ -1,55 +1,84 @@
 #include "mymem.h"
+#include<stdlib.h>
 #include<stdio.h>
-#include<pthread.h>
-void *thread(void *arg)
-{
-	char *s=arg;
-	printf("Function %s\n",s);
-	void *p =Mem_Alloc(100);
-	printf(" MAlloc return %p\n",p);
-	Mem_Dump();
-	return NULL;
-}
-
+#include<assert.h>
 int main()
 {
+	char *ptr = (char *)Mem_Init(4096, 64);
+	assert(ptr != NULL);
+   	int i = 0;
+   	char *nfPtr = NULL, *nfPtr1 = NULL, *nfPtr2 = NULL;
+   	for(i=0; i<64; i++)
+   	{
+		if(i == 13)
+		{
+			nfPtr1 = (char *)Mem_Alloc(32);
+			assert(nfPtr1 != NULL);
+		}
+		else if(i == 14)
+		{
+			nfPtr2 = (char *)Mem_Alloc(32);
+			assert(nfPtr2 != NULL);
+		}
+		else
+		{
+			nfPtr = (char *)Mem_Alloc(32);
+			if(nfPtr == NULL)
+				printf("\n%d failed\n",i);
+		}
+		printf("%d\n",i);
+   	}
+   	if(Mem_Alloc(32) == NULL)
+	{
+		printf("Asset failed\n");
+
+	}
+   	assert(Mem_Free(nfPtr1) == 0);
+   	assert(Mem_Free(nfPtr2) == 0);
+   
+   	nfPtr = (char *)Mem_Alloc(55);
+   	assert(nfPtr != NULL);
+   	assert(nfPtr == nfPtr1);
+   	exit(0);
+
+
+
+/*
 	
-	pthread_t pth[2];
-	Mem_Init(4096,128);
-	pthread_create(&pth[0],NULL,thread,"A");
-	pthread_create(&pth[1],NULL,thread,"B");
-	printf("Main\n");
-	pthread_join(pth[1],NULL);
-	pthread_join(pth[0],NULL);
+	char *ptr = (char *)Mem_Init(4096, 64);
+   	assert(ptr != NULL);
+   	int i = 0;
+   	//char *nfPtr;
+   	for(i=0; i<64; i++)
+   	{
+   		//Mem_Alloc(32);
+		printf("\n%d - %p",i,Mem_Alloc(32));
+		//assert(nfPtr != NULL);
+		//assert(nfPtr-ptr-sizeof(struct AllocatedHeader) >= 1024);
+   	}
+	printf("\n%p",Mem_Alloc(32));
+   	//assert(Mem_Alloc(32) == NULL);
+   
 	
-	/*
+	
 	printf("Meminit 4096 %p\n",Mem_Init(4096,128));
-	Mem_Dump(); // prints info on address of nextfit and slab head
 	void *p=Mem_Alloc(100); // should be in next fit
 	printf("Malloc address %p\n",p);
-        Mem_Dump();
-	printf("Free\n");
-	Mem_Free(p);
-	Mem_Dump();
-	p=Mem_Alloc(100);
-	printf("Malloc address %p\n",p);
-        Mem_Dump();
-     
-	printf("Allocate slab\n");
-        void *p=Mem_Alloc(128); // should be in slab
-	printf("Mem_Alloc %p\n",p);
-	 printf("Allocate slab\n");
-	p=Mem_Alloc(128); // should be in slab
-        printf("Mem_Alloc %p\n",p);
-        Mem_Dump();
-	 printf("Free slab\n");
-	Mem_Free(p);
-	Mem_Dump();
-	 printf("Allocate slab\n");
+        //struct AllocatedHeader *pp = p - sizeof(struct AllocatedHeader);
+        p=Mem_Alloc(128); // should be in next fit
+        printf("Malloc address %p\n",p);
+        //struct AllocatedHeader *pp = p - sizeof(struct AllocatedHeader);
+        //        int i=Mem_Free(p);
+        //                printf("%d\n",i);
+        //
+        
+	int i=Mem_Free(p);
+	printf("%d\n",i);
 
-	printf("Mem_Alloc %p\n",Mem_Alloc(128)); // should be in slab
-        Mem_Dump();
-	*/
 
-	return 1;
+	assert(Mem_Init(4096,64) != NULL);
+   	void* ptr = Mem_Alloc(32);
+   	assert(ptr != NULL);
+   	printf("%d",Mem_Free(ptr));*/
+   	exit(0);
 }
