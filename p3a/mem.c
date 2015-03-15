@@ -60,12 +60,16 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
  * ******************************************************************************************************************************************************************************/
 void * Mem_Alloc(int size)
 {
+	int found = 0; //to look through the free list
+	int assigned =0;
+	if(nextfit == NULL && nextfithead!=NULL)
+	{
+		nextfit = nextfithead;
+	}
 	//to check if mem_init has been called
 	if(done==0)
 		return NULL;
-
-	int assigned = 0;// to check if allocated in slab region
-	if(size == slabvalue && slabhead != NULL)
+	if(slabvalue == size && slabhead!=NULL)
 	{
 		void *temp = slabhead;
 		void *new = temp;
@@ -76,21 +80,71 @@ void * Mem_Alloc(int size)
 		bzero(new,slabvalue);
 		return new;
 	}
+	//if not assigned in the slab region
 	if(assigned == 0)
 	{
-	   /*if((void*)nextfithead>=(ASstart+totalsize))
+	   
+	   if(nextfithead != NULL)
 	   {
-		nextfithead=NULL;
-		nextfithead->next=NULL;
-	   }
-	   else*/ if(nextfithead != NULL)
-	   {
-                if(size % 16 != 0)
+		// make is 16-bit aligned
+		if(size % 16 !=0)
                 {
                         size = size + (16 - size % 16);
                 }
-                //int magicvalue = MAGIC;
-                int currsize = nextfithead->length;
+                //look through the free list until you find a free region >=size
+                while(found==0 && nextfit!=NULL)
+		{
+			if(nextfit->length < size)
+			{
+				nextfit = nextfit->next;	
+				continue;
+			}
+			else
+			{
+				struct AllocatedHeader* process = (struct AllocatedHeader*)nextfit;
+				int cal = nextfit->length - (size + sizeof(struct FreeHeader));
+				found = 1;
+				struct FreeHeader* temp = nextfit;
+             			//check if the whole chunk will be allocated- in that case move the nextfit accordingly
+				if(temp->length == size)
+				{
+					if(temp->next !=NULL)
+					{
+						temp = temp->next;
+					}
+					else if(nextfithead == temp)
+					{
+					//	printf("NULLing");
+						nextfithead = NULL; 
+						nextfit = NULL;
+					}
+					else
+					{
+						temp = nextfithead;
+					}
+				} 
+				else // if part of this chunk will be allocated, change the nextfit accordingly
+				{
+					void *x=temp;
+					x=x+sizeof(struct FreeHeader) + size;
+					temp=x;
+					//temp = temp + sizeof(struct FreeHeader) + size;
+					temp->length = cal;
+					temp->next = nextfit->next;					
+				}
+				process->length = size;
+				process->magic = magic;
+				if(nextfithead == nextfit && nextfithead!=NULL)
+					nextfithead = temp;
+				if(nextfit!=NULL)
+					nextfit = temp;
+				void *p = process;
+				return (p+sizeof(struct AllocatedHeader));		   
+			}
+		}
+		
+	     }
+                /*int currsize = nextfithead->length;
                 if(currsize >= size)
                 {
                         struct AllocatedHeader* process = (struct AllocatedHeader*)nextfithead;
@@ -151,22 +205,13 @@ void * Mem_Alloc(int size)
 		{
 			//traverse list to find nextfit
 
-		}
+		}*/
 	 }
-	else
-		return NULL;
-	}
 	return NULL;
 
 }
 int Mem_Free(void *ptr)
 {
-	//struct FreeHeader *newfreed;
-        /*void *holder = ptr - sizeof(struct AllocatedHeader);
-        struct AllocatedHeader *pp = (struct AllocatedHeader*)holder;
-
-	printf("Magic %x\n",*(int *)pp->magic);
-	*/
 	int nextregionfree = 0,prevregionfree = 0;
         int slabflag = 0;
         if(ptr == NULL)
@@ -178,46 +223,33 @@ int Mem_Free(void *ptr)
 		printf("SEGFAULT\n");
         	return -1;
 	}
-	if(ptr <= (ASstart + (int)(totalsize*0.25)))
+	if(ptr <= (ASstart + (int)(totalsize*0.25))) //to check if address is within the slab region
 	{
         	slabflag = 1;
 	}
 	if(slabflag ==1)
 	{
-		//int x=ptr-ASstart;
-		//printf("Difference %d\n",x);
-		if((ptr-ASstart)%slabvalue!=0)
+		if((ptr - ASstart) % slabvalue!=0) // to check for bad pointer
 			return -1;
        		void **p = ptr + slabvalue - 8;
       	 	void *pp=ptr;
        		*p = slabhead;
        		slabhead = pp;
-		
-
 	}
 	else
 	{
                 struct FreeHeader *newfreed;
                 void *holder = ptr - sizeof(struct AllocatedHeader);
+//		printf("ptr is:%p\n",ptr);
+//		printf("Holder is :%p\n",holder);
                 struct AllocatedHeader *pp1 = (struct AllocatedHeader*)holder;
-                //int magic=MAGIC;
-               //void *mag=&magic;
-                if((pp1->magic) != magic)
+                if((pp1->magic) != magic) // check for bad pointer
                 {
 			return -1;
 		}
 		struct FreeHeader *pp=(struct FreeHeader*)pp1;
-                /*newfreed = (struct FreeHeader*)holder;
-                newfreed->next = NULL;
-                struct FreeHeader *p = nextfithead;
-                while(p->next!=NULL)
-                {
-                        p = p->next;
-                }
-                p->next = newfreed;*/
-
-		// if the next region is completely full before this free
-		// make the nextfithead to poin to this and nextfithead->next=NULL
+                // if the entire next fit region(75% of total space) was completely full before this free
+		// make the nextfithead to point to this and nextfithead->next=NULL
 		if(nextfithead == NULL)
 		{
 			newfreed = (struct FreeHeader*)holder;
@@ -235,7 +267,8 @@ int Mem_Free(void *ptr)
 			if((void*)p2->next != magic)
 			{
 				nextregionfree = 1;
-				pp->length += p2->length+sizeof(struct AllocatedHeader);
+//				printf("next region free!\n");
+				pp->length += p2->length+sizeof(struct FreeHeader);
 			}
 		}
 	        //Check if previous region is free
@@ -248,7 +281,8 @@ int Mem_Free(void *ptr)
         	        if((void*)checkpoint == (void*)pp)
                 	{
 				prevregionfree=1;
-                        	checkpoint->length += sizeof(struct AllocatedHeader) + pp->length;
+//				printf("Prev region free!\n");
+                        	p->length += sizeof(struct AllocatedHeader) + pp->length;
 				break;
                 	}
                         p = p->next;
@@ -260,7 +294,8 @@ int Mem_Free(void *ptr)
 			if((void*)checkpoint == (void*)pp)
 			{
 				prevregionfree = 1;
-				checkpoint->length += sizeof(struct AllocatedHeader) + pp->length;
+//				printf("Prev region free!\n");
+				p->length += sizeof(struct AllocatedHeader) + pp->length;
 			}
 		}
 		//make the free list pointers correct
@@ -291,10 +326,8 @@ int Mem_Free(void *ptr)
 				onlyfree = onlyfree->next;
 			}
 			onlyfree->next = pp;
+			pp->next = NULL;
 		}
-	
-		
-                //p->next = newfreed;
 	}
 	
 	return 0;
@@ -302,7 +335,8 @@ int Mem_Free(void *ptr)
 
 void Mem_Dump()
 {
-	//printf("Head length is %d Head is %p Slabhead is %p NextfitHead->next %p\n",nextfithead->length,nextfithead,slabhead,nextfithead->next);
+//	if(nextfithead!=NULL)
+//	printf("Next fit Head is %p Slabhead is %p Nextfit is %p nextfithead->length is %d nextfithead->next is %p\n",nextfithead,slabhead,nextfit,nextfithead->length,nextfithead->next);
 	return;
 }
 

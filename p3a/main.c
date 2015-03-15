@@ -6,23 +6,29 @@ int main()
 {
 	char *ptr = (char *)Mem_Init(4096, 64);
 	assert(ptr != NULL);
-   	int i = 0;
+   	Mem_Dump();
+	int i = 0;
    	char *nfPtr = NULL, *nfPtr1 = NULL, *nfPtr2 = NULL;
    	for(i=0; i<64; i++)
    	{
 		if(i == 13)
 		{
 			nfPtr1 = (char *)Mem_Alloc(32);
+			printf("nfPtr for 13:%p\n",nfPtr1);
+			Mem_Dump();
 			assert(nfPtr1 != NULL);
 		}
 		else if(i == 14)
 		{
 			nfPtr2 = (char *)Mem_Alloc(32);
+			printf("nfPtr for 14:%p\n",nfPtr2);
+			Mem_Dump();
 			assert(nfPtr2 != NULL);
 		}
 		else
 		{
 			nfPtr = (char *)Mem_Alloc(32);
+			Mem_Dump();
 			if(nfPtr == NULL)
 				printf("\n%d failed\n",i);
 		}
@@ -30,14 +36,20 @@ int main()
    	}
    	if(Mem_Alloc(32) == NULL)
 	{
-		printf("Asset failed\n");
+		printf("Assert failed\n");
 
 	}
-   	assert(Mem_Free(nfPtr1) == 0);
+	printf("Freeing 13\n");
+  	assert(Mem_Free(nfPtr1) == 0);
+	Mem_Dump();
+	printf("Freeing 14\n");
    	assert(Mem_Free(nfPtr2) == 0);
-   
+   	Mem_Dump();
+	printf("allocating 55\n");
    	nfPtr = (char *)Mem_Alloc(55);
+	printf("55 allocated at %p",nfPtr);
    	assert(nfPtr != NULL);
+	Mem_Dump();
    	assert(nfPtr == nfPtr1);
    	exit(0);
 
