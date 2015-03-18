@@ -4,21 +4,24 @@
 #include<pthread.h>
 #include "mymem.h"
 
-int slabvalue = 0; //size of each slab region
-int done = 0; //mem_init flag variable
-int totalsize = 0; // size of memory given to next fit and slab allocator (75% and 25% of free space respectively)
-struct FreeHeader * nextfithead = NULL, *slabhead = NULL, *nextfit = NULL;
-void* ASstart = NULL;
-void *magic = NULL;
+int slabvalue=0; //size of each slab region
+int done=0; //mem_init flag variable
+int /*nextfitsize=0,slabmemory=0,*/totalsize=0; // size of memory given to next fit and slab allocator (75% and 25% of free space respectively)
+struct FreeHeader * nextfithead=NULL, *slabhead=NULL, *nextfit=NULL;
+void* ASstart=NULL;
+void *magic=NULL;
 int magicval=MAGIC;
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 void * Mem_Init(int sizeOfRegion, int slabSize)
 {
 	if(done==0) // make sure mem_init called only once
 	{
+		//lock = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
 		int i;
 		magic=&magicval;
 		totalsize = sizeOfRegion;
+		//nextfitsize=sizeOfRegion * 0.75; // allocate size
+		//slabmemory=sizeOfRegion * 0.25;
 		void *ptr = mmap(NULL, sizeOfRegion, PROT_READ|PROT_WRITE,MAP_ANON|MAP_PRIVATE, -1, 0);
 		ASstart = ptr;
 		//initializing nextfithead
@@ -32,6 +35,7 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
 		slabhead = ptr;
 		if(ptr == MAP_FAILED)
 		{
+			//perror("mmap");
 			return NULL;
 		}
 		int numofslabs = (sizeOfRegion * 0.25) / slabvalue;

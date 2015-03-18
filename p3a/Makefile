@@ -1,7 +1,7 @@
 all: main
 
 main: main.c libmem.so
-	gcc -g -lmem -L . -o main main.c -Wall -Werror
+	gcc -g -lmem -L . -o main main.c -Wall -Werror -lpthread
 
 libmem.so: mem.o
 	gcc  -shared -o libmem.so mem.o
