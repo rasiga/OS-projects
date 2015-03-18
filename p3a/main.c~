@@ -15,7 +15,7 @@ int main() {
    {
 	printf("\n%d",i);
    	nfPtr = (char *)Mem_Alloc(32);
-	printf("\n%p",nfPtr);
+	printf("\n%p",mfPtr);
 	assert(nfPtr != NULL);
 	assert(nfPtr-ptr-sizeof(struct AllocatedHeader) >= 1024);
 	if (i == 13)
