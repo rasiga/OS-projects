@@ -1,44 +1,101 @@
-/* Fill half of next fit region. The next allocation after the fill should be the 
- * one that comes after the last allocation */
+/* multi threaded alloc and free calls */
 #include <assert.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include "mymem.h"
-#include <stdio.h>
 
-int main() {
-   char *ptr = (char *)Mem_Init(4096, 64);
-   Mem_Dump();
-   assert(ptr != NULL);
-   int i = 0;
-   char *nfPtr,*nfPtr1,*nfPtr2,*nfPtr3;
-   for(i=0; i<32; i++)
-   {
-   	nfPtr = (char *)Mem_Alloc(32);
-	printf("\n I is:%d ",i);
-	Mem_Dump();
-	assert(nfPtr != NULL);
-	assert(nfPtr-ptr-sizeof(struct AllocatedHeader) >= 1024);
-	if (i == 13){
-		nfPtr1 = nfPtr;
-		printf("\nnfPtr1 is:%p",nfPtr1);
-	}
-	else if (i == 23){
-		nfPtr2 = nfPtr;
-		printf("\n nfPtr2 is:%p",nfPtr2);
-	}
-   }
-  printf("\n Freeing nfPtr1!");
-  assert(Mem_Free(nfPtr1) == 0);
-  Mem_Dump();
-  printf("\n Freeing nfPtr2!");
-  assert(Mem_Free(nfPtr2) == 0);
-  Mem_Dump();
-  printf("\n Allocating the last 32");
-   nfPtr3 = (char *)Mem_Alloc(32);
-   Mem_Dump();
-   assert(nfPtr3 != NULL);
-   assert(nfPtr3-ptr-sizeof(struct AllocatedHeader) >= 1024);
+#define MAX 100
 
-   assert((nfPtr + 32 + sizeof(struct AllocatedHeader)) == nfPtr3);
-   exit(0);
+char* buffer[MAX];
+int fill = 0;
+int use = 0;
+int count = 0;
+int loops = 1000;
+
+void put(char *ptr)
+{
+	buffer[fill] = ptr;
+	fill = (fill + 1) % MAX;
+	count++;
+}
+
+char* get()
+{
+	char* tmp = buffer[use];
+	use = (use + 1) % MAX;
+	count--;
+	return tmp;
+}
+
+pthread_cond_t *empty, *full;
+pthread_mutex_t *mutex;
+
+void* producer(void *arg)
+{
+	int i;
+	char *nfPtr = NULL;
+	for(i=0; i<loops; i++)
+	{
+		nfPtr = NULL;
+		nfPtr = Mem_Alloc(32);
+		pthread_mutex_lock(mutex);
+		while (count == MAX)
+			pthread_cond_wait(empty, mutex);
+		assert(nfPtr != NULL);
+		put(nfPtr);
+		pthread_cond_signal(full);
+		pthread_mutex_unlock(mutex);
+	}
+	return NULL;
+}
+
+void* consumer(void *arg)
+{
+	int i;
+	char *nfPtr = NULL;
+	for(i=0; i<loops; i++)
+	{
+		pthread_mutex_lock(mutex);
+		while (count == 0)
+			pthread_cond_wait(full, mutex);
+		nfPtr = get();
+		assert(Mem_Free(nfPtr) == 0);
+		pthread_cond_signal(empty);
+		pthread_mutex_unlock(mutex);
+	}
+	return NULL;
+}
+
+
+void initSync()
+{
+	mutex = (pthread_mutex_t *) malloc (sizeof (pthread_mutex_t));
+	empty = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
+	full = (pthread_cond_t *) malloc (sizeof (pthread_cond_t));
+
+	pthread_mutex_init (mutex, NULL);	
+	pthread_cond_init (full, NULL);
+	pthread_cond_init (empty, NULL);
+}
+
+
+int main()
+{
+	assert(Mem_Init(8192,64) != NULL);
+
+	initSync();
+
+	pthread_t p1,p2,c1,c2;
+
+	pthread_create(&p1, NULL, producer, NULL);
+	pthread_create(&p2, NULL, producer, NULL);
+	pthread_create(&c1, NULL, consumer, NULL);
+	pthread_create(&c2, NULL, consumer, NULL);
+	
+	pthread_join(p1, NULL);
+	pthread_join(p2, NULL);
+	pthread_join(c1, NULL);
+	pthread_join(c2, NULL);
+
+	exit(0);	
 }

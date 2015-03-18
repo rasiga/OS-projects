@@ -125,27 +125,26 @@ void * Mem_Alloc(int size)
 				//find the free space before nextfit in the free list
 				struct FreeHeader* head=nextfithead;
 				int remainfree = nextfit->length - size;
-				// Only one exists
-				if(head->next==NULL || head == temp) //you are allocating at the start of the list - could be the only chunk or there could be others after you
-				{ //changed here!!
-					/*if(head->next ==NULL)
+				// Only one exists or this is the first
+				if(head->next==NULL || head == temp)
+				{
+					//CHANGED HERE!!!
+					if(head->next == NULL)
 						printf("\nOnly chunk");
-					else 
-						printf("\n TEMP AT START");*/
+					else
+						printf("\n TEMP AT START");
 					//allocate for one and push this forward
 					if(temp->length == size || remainfree < sizeof(struct FreeHeader))
 					{
 						if(head->next == NULL)
-						{
-							//printf("\nAll Alloc");
-							temp = NULL;
+						{//printf("\nAll Alloc");
+							nextfit = NULL;
 							nextfithead = NULL;
 						}
 						else
 						{
-							//change the nextfithead and nextfit to point to the one after you
 							nextfithead = nextfithead->next;
-							temp = nextfithead;
+							temp = nextfit;
 						}
 					}
 					else
@@ -173,7 +172,7 @@ void * Mem_Alloc(int size)
 					 }
 					if( temp->next !=NULL  )
 					{
-					//	printf("\nTEMP AT MIDDLE");
+						printf("\nTEMP AT MIDDLE");
 							// need to put in the middle
 						if(temp->length == size || remainfree < sizeof(struct FreeHeader))
                                         	{
@@ -196,8 +195,7 @@ void * Mem_Alloc(int size)
 					}
 					if(inlist == 0 ) // temp is at the end was at the end temp->next == NULL
 					{
-						//printf("\nTEMP AT END");
-						
+						printf("\nTEMP AT END");
 						if(temp->length == size || remainfree < sizeof(struct FreeHeader))
                                                 {		// whole thing allocated
 							 
@@ -206,18 +204,15 @@ void * Mem_Alloc(int size)
                                                 }
 						else
 						{
-							
 							void *x = temp;//adding sizeof struct should be with void*
                                                         x = x + sizeof(struct AllocatedHeader) + size;
                                                         temp = x;
                                                         temp->length = cal;
 							temp->next = NULL;
-							printf("\n head is:%p",head);
 							head->next = temp;
 							//nextfit = temp;
 
 						}
-					
 					}
              			}
 				process->length = size;
@@ -320,7 +315,7 @@ int Mem_Free(void *ptr)
                         nextfit = newfreed;*/
 			void *next = ptr + pp->length;
 			struct FreeHeader *p2=NULL;
-			//IDA: if the next region is free, then it would definitely be pointed to by nextfithead
+			//IDEA: if the chunk next to this is free it would have been the nextfithead
 			if(next < (ASstart+totalsize) )
                 	{
                         	p2 = (struct FreeHeader*)next;
@@ -345,7 +340,7 @@ int Mem_Free(void *ptr)
                         return 0;
                                                                
                 }
-		// if the to-be-freed region is below the nextfithead
+
 		//Coalescing
 		// Check if next region is free
 		void *next = ptr + pp->length;
@@ -373,7 +368,7 @@ int Mem_Free(void *ptr)
 				prevregionfree=1;
 				//printf("\nPrev region free!\n");
                         	p->length += sizeof(struct AllocatedHeader) + pp->length;
-				//p->next = pp->next; //CHANGED:Remember pp is the newly to-be-freed location! doesnt have a next value!
+				//p->next = pp->next; //Remember: pp is the to-be-freed chunk
 				break;
                 	}
                         p = p->next;
@@ -395,8 +390,7 @@ int Mem_Free(void *ptr)
 		//make the free list pointers correct
 		if(nextregionfree == 1)
 		{
-			//CHANGED: Can't happen because you already know that pp>nextfithead
-			/*if(nextfithead == p2) // if the next region is the beginning of the free list (ie freehithead)
+			if(nextfithead == p2) // if the next region is the beginning of the free list (ie freehithead)
 			{
 				if(prevregionfree == 1) //this whole chunk from previous region to the end of this fre space pointed by nextfitfree
 				{
@@ -410,7 +404,7 @@ int Mem_Free(void *ptr)
 				}
 			}
 			else
-			{*/
+			{
 				struct FreeHeader *traverse = nextfithead;
         	        	while(traverse->next!=NULL)
                 		{
@@ -420,7 +414,7 @@ int Mem_Free(void *ptr)
 						if(prevregionfree == 1)
 						{
 							//traverse->next = p;
-							p->next = p2->next;// if p and p2 (ie previous and next regions are free), only possibility was your prev was pointing to next.
+							p->next = p2->next; //if both of your previous and next regions are free - means that previous was pointing to your next free
 						}
 						else
 						{
@@ -435,16 +429,16 @@ int Mem_Free(void *ptr)
 						continue;	
 					}	
                			}
-			//}
+			}
 		}
 		if(nextregionfree == 0 && prevregionfree == 0)
 		{
-			//CHANGED: you are not before nextfithead nor are you immediately before or after a free chunk, 
-			//so, traverse through the free list and find your spot!
 			struct FreeHeader *onlyfree = nextfithead;
+			//means that you are neither immediately between two free blocks nor immediately after / before one
+			//so, traverse the list and find your position
 			while(onlyfree->next!=NULL)
 			{
-				if(onlyfree->next > pp) //means you are after onlyfree
+				if(onlyfree->next > pp)
 				{
 					pp->next = onlyfree->next;
 					onlyfree->next = pp;
@@ -452,8 +446,7 @@ int Mem_Free(void *ptr)
 				}
 				onlyfree = onlyfree->next;
 			}
-			// you are to be added to the end of the list
-			if(onlyfree->next == NULL)
+			if(onlyfree->next ==NULL)
 			{
 				onlyfree->next = pp;
 				pp->next = NULL;
