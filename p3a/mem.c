@@ -11,12 +11,13 @@ struct FreeHeader * nextfithead = NULL, *slabhead = NULL, *nextfit = NULL;
 void* ASstart = NULL;
 void *magic = NULL;
 int magicval=MAGIC;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t lock=PTHREAD_MUTEX_INITIALIZER;
 void * Mem_Init(int sizeOfRegion, int slabSize)
 {
 	if(done==0) // make sure mem_init called only once
 	{
 		int i;
+		//lock = PTHREAD_MUTEX_INITIALIZER;
 		magic=&magicval;
 		totalsize = sizeOfRegion;
 		void *ptr = mmap(NULL, sizeOfRegion, PROT_READ|PROT_WRITE,MAP_ANON|MAP_PRIVATE, -1, 0);
@@ -59,6 +60,7 @@ void * Mem_Init(int sizeOfRegion, int slabSize)
  * ******************************************************************************************************************************************************************************/
 void * Mem_Alloc(int size)
 {
+	
 	//to check if mem_init has been called
 	if(done==0)
         {       
@@ -82,7 +84,8 @@ void * Mem_Alloc(int size)
 		assigned = 1;
 		void **x = temp - 8;
 		slabhead = *x;
-		bzero(new,slabvalue);
+		//bzero(new,slabvalue);
+		memset(new,0,slabvalue);
 		//printf("\n Mem_Alloc unlock request");
 		pthread_mutex_unlock(&lock);
 		//printf("\n Mem_Alloc unlock done");
@@ -103,7 +106,7 @@ void * Mem_Alloc(int size)
                 
                 while(found==0 && nextfit!=NULL)
 		{
-			//printf("\nLoop");	
+			//printf("\nLoop to find next fit");	
 			if(nextfit->length < size)
 			{
 				if(nextfit->next!=NULL)
@@ -118,33 +121,34 @@ void * Mem_Alloc(int size)
 			else
 			{
 				struct AllocatedHeader* process = (struct AllocatedHeader*)nextfit;
-				int cal = nextfit->length - (size + sizeof(struct AllocatedHeader));
+				int cal = nextfit->length - (size + sizeof(struct FreeHeader));
 				found = 1;
 				int inlist = 0; // added in list
 				struct FreeHeader* temp = nextfit;
 				//find the free space before nextfit in the free list
 				struct FreeHeader* head=nextfithead;
 				int remainfree = nextfit->length - size;
-				// Only one exists or this is the first
-				if(head->next==NULL || head == temp)
-				{
-					//CHANGED HERE!!!
-					if(head->next == NULL)
+				// Only one exists
+				if(head->next==NULL || head == temp) //you are allocating at the start of the list - could be the only chunk or there could be others after you
+				{ //changed here!!
+					/*if(head->next ==NULL)
 						printf("\nOnly chunk");
-					else
-						printf("\n TEMP AT START");
+					else 
+						printf("\n TEMP AT START");*/
 					//allocate for one and push this forward
 					if(temp->length == size || remainfree < sizeof(struct FreeHeader))
 					{
 						if(head->next == NULL)
-						{//printf("\nAll Alloc");
-							nextfit = NULL;
+						{
+							//printf("\nAll Alloc");
+							temp = NULL;
 							nextfithead = NULL;
 						}
 						else
 						{
+							//change the nextfithead and nextfit to point to the one after you
 							nextfithead = nextfithead->next;
-							temp = nextfit;
+							temp = nextfithead;
 						}
 					}
 					else
@@ -168,11 +172,12 @@ void * Mem_Alloc(int size)
 				{
 					 while(head->next!=temp/* && inlist == 0*/)
 					 {
+					//	printf("\nLoop in next finding what points to me");
 						head=head->next;
 					 }
 					if( temp->next !=NULL  )
 					{
-						printf("\nTEMP AT MIDDLE");
+					//	printf("\nTEMP AT MIDDLE");
 							// need to put in the middle
 						if(temp->length == size || remainfree < sizeof(struct FreeHeader))
                                         	{
@@ -195,7 +200,8 @@ void * Mem_Alloc(int size)
 					}
 					if(inlist == 0 ) // temp is at the end was at the end temp->next == NULL
 					{
-						printf("\nTEMP AT END");
+						//printf("\nTEMP AT END");
+						
 						if(temp->length == size || remainfree < sizeof(struct FreeHeader))
                                                 {		// whole thing allocated
 							 
@@ -204,15 +210,18 @@ void * Mem_Alloc(int size)
                                                 }
 						else
 						{
+							
 							void *x = temp;//adding sizeof struct should be with void*
                                                         x = x + sizeof(struct AllocatedHeader) + size;
                                                         temp = x;
                                                         temp->length = cal;
 							temp->next = NULL;
+							//printf("\n head is:%p",head);
 							head->next = temp;
 							//nextfit = temp;
 
 						}
+					
 					}
              			}
 				process->length = size;
@@ -220,6 +229,8 @@ void * Mem_Alloc(int size)
 				void *p = process;
 				nextfit = temp;
 				//printf("\nMem_Alloc unlock request");
+				if(size==slabvalue)
+					  memset(p,0,slabvalue);
 				pthread_mutex_unlock(&lock);
 				//printf("\n Mem_Alloc unlock done");
 				return (p+sizeof(struct AllocatedHeader));		   
@@ -268,7 +279,7 @@ int Mem_Free(void *ptr)
 		if((ptr - ASstart) % slabvalue!=0) // to check for bad pointer
 		{	                
 			//printf("\nMem_Free unlock request");
-			pthread_mutex_unlock(&lock);
+                               pthread_mutex_unlock(&lock);
 			//printf("\n Mem_Free unlock done");
 			return -1;
 		}
@@ -315,13 +326,15 @@ int Mem_Free(void *ptr)
                         nextfit = newfreed;*/
 			void *next = ptr + pp->length;
 			struct FreeHeader *p2=NULL;
-			//IDEA: if the chunk next to this is free it would have been the nextfithead
+			//IDA: if the next region is free, then it would definitely be pointed to by nextfithead
 			if(next < (ASstart+totalsize) )
                 	{
+				//printf("\nCheck if next is free");
                         	p2 = (struct FreeHeader*)next;
                         	if((void*)p2->next != magic)
                         	{
                                 	nextregionfree = 1;
+				//	printf("\nYes");
                 		        pp->length += p2->length+sizeof(struct FreeHeader);
                         	}
                 	}
@@ -332,15 +345,20 @@ int Mem_Free(void *ptr)
 			}
 			else
 			{
+			//	printf("\nNext region is free");
+				if(nextfithead==nextfit)
+					nextfit=pp;
 				pp->next=nextfithead->next;
 				nextfithead=pp;
+			
 			}
+			
              		pthread_mutex_unlock(&lock);
                         //printf("\n Mem_Free unlock done");
                         return 0;
                                                                
                 }
-
+		// if the to-be-freed region is below the nextfithead
 		//Coalescing
 		// Check if next region is free
 		void *next = ptr + pp->length;
@@ -360,7 +378,7 @@ int Mem_Free(void *ptr)
 		struct FreeHeader *checkpoint=NULL;
                 while(p->next!=NULL)
                 {
-			//printf("\nLoop in free 1");
+//			printf("\nLoop to find prevregion which points to me");
 			void *prevreg = p;
 	                checkpoint = prevreg + sizeof(struct FreeHeader) + p->length;
         	        if((void*)checkpoint == (void*)pp)
@@ -368,7 +386,7 @@ int Mem_Free(void *ptr)
 				prevregionfree=1;
 				//printf("\nPrev region free!\n");
                         	p->length += sizeof(struct AllocatedHeader) + pp->length;
-				//p->next = pp->next; //Remember: pp is the to-be-freed chunk
+				//p->next = pp->next; //CHANGED:Remember pp is the newly to-be-freed location! doesnt have a next value!
 				break;
                 	}
                         p = p->next;
@@ -385,12 +403,13 @@ int Mem_Free(void *ptr)
 			}
 		}
 		// p represents previous free if exists and p2 represents next free if exists
-		if(nextregionfree==1 && prevregionfree==1)
-			printf("\nNeed to coalesce");	
+	//	if(nextregionfree==1 && prevregionfree==1)
+	//		printf("\nNeed to coalesce in both direction");	
 		//make the free list pointers correct
 		if(nextregionfree == 1)
 		{
-			if(nextfithead == p2) // if the next region is the beginning of the free list (ie freehithead)
+			//CHANGED: Can't happen because you already know that pp>nextfithead
+			/*if(nextfithead == p2) // if the next region is the beginning of the free list (ie freehithead)
 			{
 				if(prevregionfree == 1) //this whole chunk from previous region to the end of this fre space pointed by nextfitfree
 				{
@@ -404,20 +423,25 @@ int Mem_Free(void *ptr)
 				}
 			}
 			else
-			{
+			{*/
+				//printf("\nNext region is free");
 				struct FreeHeader *traverse = nextfithead;
         	        	while(traverse->next!=NULL)
                 		{
-					printf("\nFree");
+					//printf("\nLoop inside when nextregion is free");
                 			if(traverse->next == p2)
 					{
 						if(prevregionfree == 1)
 						{
+							if(nextfit==p2)
+								nextfit=p;
 							//traverse->next = p;
-							p->next = p2->next; //if both of your previous and next regions are free - means that previous was pointing to your next free
+							p->next = p2->next;// if p and p2 (ie previous and next regions are free), only possibility was your prev was pointing to next.
 						}
 						else
 						{
+							if(nextfit==p2)
+								nextfit=pp;
 							traverse->next = pp;
 							pp->next = p2->next;
 						}
@@ -426,19 +450,20 @@ int Mem_Free(void *ptr)
 					else 
 					{
 						traverse = traverse->next;
-						continue;	
+						//continue;	
 					}	
                			}
-			}
+			//}
 		}
 		if(nextregionfree == 0 && prevregionfree == 0)
 		{
+			//CHANGED: you are not before nextfithead nor are you immediately before or after a free chunk, 
+			//so, traverse through the free list and find your spot!
 			struct FreeHeader *onlyfree = nextfithead;
-			//means that you are neither immediately between two free blocks nor immediately after / before one
-			//so, traverse the list and find your position
 			while(onlyfree->next!=NULL)
 			{
-				if(onlyfree->next > pp)
+				//printf("\nLoop for onlyfree");
+				if(onlyfree->next > pp) //means you are after onlyfree
 				{
 					pp->next = onlyfree->next;
 					onlyfree->next = pp;
@@ -446,7 +471,8 @@ int Mem_Free(void *ptr)
 				}
 				onlyfree = onlyfree->next;
 			}
-			if(onlyfree->next ==NULL)
+			// you are to be added to the end of the list
+			if(onlyfree->next == NULL)
 			{
 				onlyfree->next = pp;
 				pp->next = NULL;
@@ -463,6 +489,7 @@ void Mem_Dump()
 {
 	if(nextfithead!=NULL)
 		printf("\nNext fit Head is %p Slabhead is %p Nextfit is %p nextfithead->length is %d nextfithead->next is %p",nextfithead,slabhead,nextfit,nextfithead->length,nextfithead->next);
+
 	return;
 }
 

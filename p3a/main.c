@@ -1,6 +1,7 @@
 /* multi threaded alloc and free calls */
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <pthread.h>
 #include "mymem.h"
 
@@ -36,6 +37,7 @@ void* producer(void *arg)
 	char *nfPtr = NULL;
 	for(i=0; i<loops; i++)
 	{
+//		printf("\n Producer I is %d",i);
 		nfPtr = NULL;
 		nfPtr = Mem_Alloc(32);
 		pthread_mutex_lock(mutex);
@@ -55,6 +57,7 @@ void* consumer(void *arg)
 	char *nfPtr = NULL;
 	for(i=0; i<loops; i++)
 	{
+//		printf("\n Consumer I is %d",i);
 		pthread_mutex_lock(mutex);
 		while (count == 0)
 			pthread_cond_wait(full, mutex);
@@ -85,7 +88,7 @@ int main()
 
 	initSync();
 
-	pthread_t p1,p2,c1,c2;
+	pthread_t p1,c1,p2,c2;//,c1,c2;
 
 	pthread_create(&p1, NULL, producer, NULL);
 	pthread_create(&p2, NULL, producer, NULL);
