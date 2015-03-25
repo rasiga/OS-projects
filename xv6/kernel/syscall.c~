@@ -67,7 +67,7 @@ argptr(int n, char **pp, int size)
   {
     return -1;
   }
-  if(i<=4096)
+  if(i==0)
   {
 	
 	cprintf("\n---\n");

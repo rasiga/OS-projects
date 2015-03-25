@@ -32,7 +32,16 @@ exec(char *path, char **argv)
     goto bad;
 
   // Load program into memory.
-  sz = 0;
+  sz = PGSIZE-1;
+  sz=PGROUNDUP(sz);
+  /*
+  if((sz = allocuvm(pgdir, sz, PGSIZE)) == 0)
+  {
+	//cprintf("\nBad Address\n");
+	goto bad;
+    
+  }*/
+
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
     if(readi(ip, (char*)&ph, off, sizeof(ph)) != sizeof(ph))
       goto bad;
@@ -44,7 +53,6 @@ exec(char *path, char **argv)
       goto bad;
     if(loaduvm(pgdir, (char*)ph.va, ip, ph.offset, ph.filesz) < 0)
       goto bad;
-    cprintf("sz value is %d %x\n",sz,sz);
   }
   iunlockput(ip);
   ip = 0;
