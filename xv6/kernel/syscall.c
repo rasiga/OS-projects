@@ -17,9 +17,11 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
- // cprintf("fetchint %p\n",addr);
   if(addr >= p->sz || addr+4 > p->sz)
-    return -1;
+  {
+	if(addr < proc->stack || addr+4 > USERTOP)      
+	  return -1;
+  }
   *ip = *(int*)(addr);
   return 0;
 }
@@ -31,9 +33,12 @@ int
 fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
- // cprintf("fetchstr %p\n",addr);
-  if(addr >= p->sz)
-    return -1;
+
+  if(addr >= p->sz || addr < PGSIZE)
+  {
+      if(addr < proc->stack || addr > USERTOP)      
+	return -1;
+  }
   *pp = (char*)addr;
   ep = (char*)p->sz;
   for(s = *pp; s < ep; s++)
@@ -46,8 +51,6 @@ fetchstr(struct proc *p, uint addr, char **pp)
 int
 argint(int n, int *ip)
 {
- // cprintf("argint %d\n",n);
-
   return fetchint(proc, proc->tf->esp + 4 + 4*n, ip);
 }
 
@@ -58,23 +61,21 @@ int
 argptr(int n, char **pp, int size)
 {
   int i;
-  //cprintf("Start of argptr \n");
+  
   if(argint(n, &i) < 0)
-  {
     return -1;
-  }
   if((uint)i >= proc->sz || (uint)i+size > proc->sz)
   {
-    return -1;
+	if((uint)i < proc->stack || (uint)i+size > USERTOP)    
+		return -1;
   }
-  if(i<=4096)
+  if((uint)i >= 0 && (uint)i < PGSIZE)
   {
-	
-	cprintf("\n---\n");
-        return -1;
+	cprintf("\n 0 to 4096 not allowed");
+	return -1;
   }
+  
   *pp = (char*)i;
-  //cprintf("Pointer points to %p %p\n",pp,*pp);
   return 0;
 }
 
@@ -85,8 +86,6 @@ argptr(int n, char **pp, int size)
 int
 argstr(int n, char **pp)
 {
-  //cprintf("argstr %d\n",n);
-
   int addr;
   if(argint(n, &addr) < 0)
     return -1;
@@ -127,13 +126,10 @@ void
 syscall(void)
 {
   int num;
- // cprintf("syscall\n");
   
   num = proc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num] != NULL) {
-     //cprintf("Syscall trap for %d\n",num);
-     proc->tf->eax = syscalls[num]();
-    
+    proc->tf->eax = syscalls[num]();
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             proc->pid, proc->name, num);

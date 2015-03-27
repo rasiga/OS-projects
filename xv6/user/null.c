@@ -16,24 +16,27 @@
 int
 main(int argc, char *argv[])
 {
-  char *arg;
+ // char *arg;
 
-  int fd = open("tmp", O_WRONLY|O_CREATE);
+/*  int fd = open("tmp", O_WRONLY|O_CREATE);
   assert(fd != -1);
-
+*/
   /* trying to read data at zero, should fail*/
-  arg = (char*) 0x0;
+/*  arg = (char*) 0x0;
   assert(write(fd, arg, 10) == -1);
-
+*/
   /* within null page */
-  arg = (char*) 0x400;
+ /* arg = (char*) 0x400;
   assert(write(fd, arg, 1024) == -1);
-
+*/
   /* spanning null page and code, because the length is 2 */
-  arg = (char*) 0xfff;
+ /* arg = (char*) 0xfff;
   assert(write(fd, arg, 2) == -1);
 
-  printf(1, "TEST PASSED\n");
+  printf(1, "TEST PASSED\n");*/
+ int *p=0;
+ printf(1,"%x\n",*p);
+
   exit();
 }
 

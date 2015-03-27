@@ -18,7 +18,7 @@ int
 fetchint(struct proc *p, uint addr, int *ip)
 {
  // cprintf("fetchint %p\n",addr);
-  if(addr >= p->sz || addr+4 > p->sz)
+  if(addr >= p->sz || addr+4 > p->sz )
     return -1;
   *ip = *(int*)(addr);
   return 0;
@@ -32,7 +32,7 @@ fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
  // cprintf("fetchstr %p\n",addr);
-  if(addr >= p->sz)
+  if(addr >= p->sz )
     return -1;
   *pp = (char*)addr;
   ep = (char*)p->sz;
@@ -63,16 +63,15 @@ argptr(int n, char **pp, int size)
   {
     return -1;
   }
-  if((uint)i >= proc->sz || (uint)i+size > proc->sz)
+  if((uint)i >= proc->sz || (uint)i+size > proc->sz || (uint)i<PGSIZE)
   {
     return -1;
   }
-  if(i==0)
+  /*if((uint)i<=4096)
   {
-	
-	cprintf("\n---\n");
+	//cprintf("\n---\n");
         return -1;
-  }
+  }*/
   *pp = (char*)i;
   //cprintf("Pointer points to %p %p\n",pp,*pp);
   return 0;
