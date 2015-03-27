@@ -34,13 +34,14 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  // check if trap is for pagefault
   if(tf->trapno == T_PGFLT)
-  {
+  { // this is addr which caused fault
      int addr=rcr2();
      if ((addr >= (proc->stack - PGSIZE)) && (addr < proc->stack ))
      {
        if ((proc->stack - proc->sz) >= 2*PGSIZE )
-       {
+       { // alloc stack which did not exists before this
          if ((allocuvm(proc->pgdir, proc->stack-PGSIZE, proc->stack))!=0) 
          {
            proc->stack = proc->stack - PGSIZE;
