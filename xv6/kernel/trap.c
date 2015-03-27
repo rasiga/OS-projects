@@ -34,6 +34,23 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  if(tf->trapno == T_PGFLT)
+  {
+     int addr=rcr2();
+     if ((addr >= (proc->stack - PGSIZE)) && (addr < proc->stack ))
+     {
+       if ((proc->stack - proc->sz) >= 2*PGSIZE )
+       {
+         if ((allocuvm(proc->pgdir, proc->stack-PGSIZE, proc->stack))!=0) 
+         {
+           proc->stack = proc->stack - PGSIZE;
+           return;
+         }
+       }
+     }
+    
+   }
+
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
@@ -75,27 +92,14 @@ trap(struct trapframe *tf)
             cpu->id, tf->cs, tf->eip);
     lapiceoi();
     break;
-   
-  default:
+   default:
     if(proc == 0 || (tf->cs&3) == 0){
       // In kernel, it must be our mistake.
       cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
               tf->trapno, cpu->id, tf->eip, rcr2());
       panic("trap");
     }
-
-    int addr=rcr2();
-    if (( tf->trapno == T_PGFLT) && (addr >= (proc->stack - PGSIZE)) && (addr < proc->stack ))
-    {
-      if ((proc->stack - proc->sz) >= 2*PGSIZE )
-      {
-        if ((allocuvm(proc->pgdir, proc->stack-PGSIZE, proc->stack))!=0) 
-        {
-          proc->stack = proc->stack - PGSIZE;
-          return;
-        }
-      }
-    }
+    
     // In user space, assume process misbehaved.
     cprintf("pid %d %s: trap %d err %d on cpu %d "
             "eip 0x%x addr 0x%x--kill proc\n",

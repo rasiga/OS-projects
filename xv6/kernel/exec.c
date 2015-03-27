@@ -52,6 +52,7 @@ exec(char *path, char **argv)
   sz = PGROUNDUP(sz);
   /*if((sz = allocuvm(pgdir, sz, sz + PGSIZE)) == 0)
     goto bad;*/
+  // move stack to last 
   if((sp = allocuvm(pgdir, USERTOP-PGSIZE, USERTOP)) == 0)
     goto bad;
 
@@ -87,6 +88,7 @@ exec(char *path, char **argv)
   oldpgdir = proc->pgdir;
   proc->pgdir = pgdir;
   proc->sz = sz;
+  // additional variable to keep track of stack top
   proc->stack = USERTOP-PGSIZE;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp;

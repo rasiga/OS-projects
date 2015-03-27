@@ -18,7 +18,7 @@ int
 fetchint(struct proc *p, uint addr, int *ip)
 {
   if(addr >= p->sz || addr+4 > p->sz)
-  {
+  {	// check if not stack only then return -1
 	if(addr < proc->stack || addr+4 > USERTOP)      
 	  return -1;
   }
@@ -33,9 +33,9 @@ int
 fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
-
+  
   if(addr >= p->sz || addr < PGSIZE)
-  {
+  {	// check if not stack only then return -1
       if(addr < proc->stack || addr > USERTOP)      
 	return -1;
   }
@@ -66,12 +66,14 @@ argptr(int n, char **pp, int size)
     return -1;
   if((uint)i >= proc->sz || (uint)i+size > proc->sz)
   {
+	// check if not stack only then return -1
 	if((uint)i < proc->stack || (uint)i+size > USERTOP)    
 		return -1;
   }
+  // check if null pointer dereference
   if((uint)i >= 0 && (uint)i < PGSIZE)
   {
-	cprintf("\n 0 to 4096 not allowed");
+	//cprintf("\n 0 to 4096 not allowed");
 	return -1;
   }
   

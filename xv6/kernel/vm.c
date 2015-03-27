@@ -318,7 +318,7 @@ copyuvm(pde_t *pgdir, uint sz)
     if(mappages(d, (void*)i, PGSIZE, PADDR(mem), PTE_W|PTE_U) < 0)
       goto bad;
   }
-	
+  // copy stack : do almost the same thing
   for(i = proc->stack; i < USERTOP; i += PGSIZE){			
     if((pte = walkpgdir(pgdir, (void*)i, 0)) == 0)			
 	panic("copyuvm: pte should exist");			
