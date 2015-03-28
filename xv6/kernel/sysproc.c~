@@ -58,7 +58,7 @@ sys_sbrk(void)
   //cprintf("\n x is %d",x);
   if(growproc(n) < 0)
   {
-    //cprintf("\nx is in -1");
+    cprintf("\nx is in -1");
     return -1;
   }
   return addr;

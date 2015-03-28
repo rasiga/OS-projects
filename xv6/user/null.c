@@ -1,42 +1,31 @@
+/* heap must not grow into the page below stack */
 #include "types.h"
-#include "stat.h"
 #include "user.h"
-#include "fcntl.h"
 
 #undef NULL
 #define NULL ((void*)0)
 
 #define assert(x) if (x) {} else { \
-   printf(1, "%s: %d ", __FILE__, __LINE__); \
-   printf(1, "assert failed (%s)\n", # x); \
-   printf(1, "TEST FAILED\n"); \
-   exit(); \
+  printf(1, "%s: %d ", __FILE__, __LINE__); \
+  printf(1, "assert failed (%s)\n", # x); \
+  printf(1, "TEST FAILED\n"); \
+  exit(); \
 }
 
 int
 main(int argc, char *argv[])
 {
- // char *arg;
-
-/*  int fd = open("tmp", O_WRONLY|O_CREATE);
-  assert(fd != -1);
-*/
-  /* trying to read data at zero, should fail*/
-/*  arg = (char*) 0x0;
-  assert(write(fd, arg, 10) == -1);
-*/
-  /* within null page */
- /* arg = (char*) 0x400;
-  assert(write(fd, arg, 1024) == -1);
-*/
-  /* spanning null page and code, because the length is 2 */
- /* arg = (char*) 0xfff;
-  assert(write(fd, arg, 2) == -1);
-
-  printf(1, "TEST PASSED\n");*/
- int *p=0;
- printf(1,"%x\n",*p);
-
+  printf(1,"Before sbrk\n");
+  uint sz = (uint) sbrk(0); // end opf heap
+  uint stackpage = (160 - 1) * 4096; // address where stack starts
+  uint guardpage = stackpage - 4096; // address where guardpage starts
+  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
+  assert((int) sbrk(guardpage - sz) != -1); // should allocate dynamic memory from the end of heap till the guardpage
+  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
+  assert((int) sbrk(-1*(guardpage - sz)) != -1); // equivalent to sbrk(0) since sz should be equal to guardpage
+  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
+  assert((int) sbrk(guardpage - sz + 1) == -1); // cannot allocate inside the guardpage
+  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
+  printf(1, "TEST PASSED\n");
   exit();
 }
-

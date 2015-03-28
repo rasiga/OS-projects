@@ -119,7 +119,7 @@ growproc(int n)
      	if ( ( ( (int)size + npage ) > ((int)proc->stack - PGSIZE) ) )
      	{ 
 		cprintf("\nHitting Guard diff %d > diff %d n %d",( (int)sz + n ) ,( (int)proc->stack - PGSIZE ),n );
-     	   	return -1;
+     	   //return -1;
      	}
      }
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
