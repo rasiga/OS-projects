@@ -1,4 +1,4 @@
-/* heap must not grow into the page below stack */
+/* stack should grow automatically on a page fault */
 #include "types.h"
 #include "user.h"
 
@@ -12,20 +12,24 @@
   exit(); \
 }
 
+void
+recurse(int n) 
+{
+  if(n > 0)
+    recurse(n-1);
+}
+
 int
 main(int argc, char *argv[])
 {
-  printf(1,"Before sbrk\n");
-  uint sz = (uint) sbrk(0); // end opf heap
-  uint stackpage = (160 - 1) * 4096; // address where stack starts
-  uint guardpage = stackpage - 4096; // address where guardpage starts
-  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
-  assert((int) sbrk(guardpage - sz) != -1); // should allocate dynamic memory from the end of heap till the guardpage
-  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
-  assert((int) sbrk(-1*(guardpage - sz)) != -1); // equivalent to sbrk(0) since sz should be equal to guardpage
-  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
-  assert((int) sbrk(guardpage - sz + 1) == -1); // cannot allocate inside the guardpage
-  printf(1,"\nsz is %d stackpage is %d guard page is %d",sz,stackpage,guardpage);
-  printf(1, "TEST PASSED\n");
+  int pid = fork();
+  if(pid == 0) {
+    // the following command will hit the guardpage, you need to handle the fault and move the guardpage further down
+    recurse(500); // if the fault is not handled, we will not reach the print
+    printf(1, "TEST PASSED\n");
+    exit();
+  } else {
+    wait();
+  }
   exit();
 }

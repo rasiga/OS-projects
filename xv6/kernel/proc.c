@@ -155,6 +155,7 @@ fork(void)
     return -1;
   }
   np->sz = proc->sz;
+  np->stack = proc->stack;
   np->parent = proc;
   *np->tf = *proc->tf;
 
