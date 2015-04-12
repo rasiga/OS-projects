@@ -92,12 +92,30 @@ sys_uptime(void)
 int
 sys_clone(void)
 {
- return clone();
-//  return 4;
+  void *func;
+  void *arg;
+  void *stack; 
+  if(argptr(0,(char**)&func,sizeof(func))<0)
+  {
+	return -1;
+  }
+  if(argptr(1,(char**)&arg,sizeof(arg))<0) 
+  {
+	return -1;
+  }
+  if(argptr(2,(char**)&stack,sizeof(stack))<0)
+  {
+	return -1;
+  }
+
+  return clone(func,arg,stack);
 }
 int
 sys_join(void)
 {
- return join();
-//  return 5;
+  int pid;
+  if(argint(0,&pid)<0)                                                                                  
+	return -1;
+  return join(pid);
+
 }
