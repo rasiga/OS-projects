@@ -158,7 +158,16 @@ fork(void)
   safestrcpy(np->name, proc->name, sizeof(proc->name));
   return pid;
 }
-
+int 
+clone(void)
+{
+  return 4;  
+}
+int 
+join(void)
+{
+  return 5;
+}
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
