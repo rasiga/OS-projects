@@ -178,6 +178,8 @@ clone(void(*fcn)(void*), void *arg, void *stack)
     return -1;
   }*/
   
+  
+
   //dont copy address space; use parent's
   np->pgdir = proc->pgdir;
   np->sz = proc->sz;
@@ -191,6 +193,8 @@ clone(void(*fcn)(void*), void *arg, void *stack)
   *np->tf = *proc->tf;
   //initialize isThread field
   np->isThread=1;
+ 
+
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -200,7 +204,17 @@ clone(void(*fcn)(void*), void *arg, void *stack)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
- 
+
+  void *retaddr, *args;
+  retaddr = stack + PGSIZE - 2 * sizeof(void*);
+  args = stack + PGSIZE - sizeof(void*);
+  *retaddr = 0xFFFFFFFF;
+  *args = arg;
+  np->tf->esp = stack;
+  np->tf->esp += PGSIZE - 2 * sizeof(void*); 
+  np->tf->ebp = np->tf->esp;
+  np->tf->eip = fcn;
+
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
@@ -216,6 +230,40 @@ clone(void(*fcn)(void*), void *arg, void *stack)
 int 
 join(int pid)
 {
+ struct proc *p;
+  int havekids, pid;
+
+
+acquire(&ptable.lock);
+  for(;;){
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != proc || p->isThread == 0)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        pid = p->pid;
+
+        kfree(p->kstack);
+        p->kstack = 0;
+      //  freevm(p->pgdir);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+
+
   return 5;
 }
 // Exit the current process.  Does not return.
@@ -274,7 +322,7 @@ wait(void)
     // Scan through table looking for zombie children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->parent != proc)
+      if(p->parent != proc || p->isThread==1)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){
