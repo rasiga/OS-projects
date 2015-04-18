@@ -190,11 +190,10 @@ clone(void(*fcn)(void*), void *arg, void *stack)
   else
 	np->parent = proc->parent;
 
-  *np->tf = *proc->tf;
+  //*np->tf = *proc->tf;
   //initialize isThread field
   np->isThread=1;
-  np->eip
-
+ 
 
 
   // Clear %eax so that fork returns 0 in the child.
@@ -205,23 +204,115 @@ clone(void(*fcn)(void*), void *arg, void *stack)
     if(proc->ofile[i])
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
- 
+
+  void *retaddr, *args;
+  retaddr = stack + PGSIZE - 2 * sizeof(void*);
+  args = stack + PGSIZE - sizeof(void*);
+  *(uint *)retaddr = 0xFFFFFFFF;
+  *(uint *)args = (uint)arg;
+
+  np->tf = proc->tf;
+  
+  np->tf->esp = (int)stack;
+  memmove((void *)np->tf->esp,stack,PGSIZE);
+
+
+  np->tf->esp +=  PGSIZE - 2 * sizeof(void*); 
+  np->tf->ebp = np->tf->esp;
+  np->tf->eip = (int)fcn;
+
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
-  cprintf("CLONE\n");  
+  cprintf("CLONE finished %d\n",pid);  
   return pid;
 
 
 //////////////////////////////////////////////
 
-  
-  return 4;  
 }
 int 
 join(int pid)
 {
-  return 5;
+ struct proc *p;
+  int havekids;//, pid;
+  int present = 0;
+   if(pid == -1)
+  {
+	  acquire(&ptable.lock);
+  	  for(;;){
+  	  	  havekids = 0;
+  	  	  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  	    		if(p->parent != proc || p->isThread == 0)
+  		      		continue;
+  	    		havekids = 1;
+  	    		if(p->state == ZOMBIE){
+  		      		pid = p->pid;
+				kfree(p->kstack);
+  		      		p->kstack = 0;
+  	    			//  freevm(p->pgdir);
+  		      		p->state = UNUSED;
+  		      		p->pid = 0;
+  		      		p->parent = 0;
+  		      		p->name[0] = 0;
+  		      		p->killed = 0;
+  		      		release(&ptable.lock);
+  		      		return pid;
+  	    		}
+  	  	  }
+  	  	  if(!havekids || proc->killed){
+  	    		release(&ptable.lock);
+  	    		return -1;
+ 	   	  }
+    		  sleep(proc, &ptable.lock);  //DOC: wait-sleep
+  	     }
+   }
+   else
+   {
+   	 acquire(&ptable.lock);
+	 for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+		 if(p->pid == pid)
+		 {
+			present = 1;
+			break;
+		 }
+	  }
+	  release(&ptable.lock);  
+	  if(present == 0)
+	  {
+	       cprintf("PID Not found \n");
+	       return -1;
+	  }
+	  if(p->parent != proc->parent)
+	  {
+		cprintf("Not same address \n");
+		return -1;
+	   }
+	   if(p->isThread == 0)
+	   {
+	cprintf("PID Not a thread \n");
+	return -1;
+    }
+    for(;;){
+       havekids = 0;
+       if(p->state == ZOMBIE){
+	 pid = p->pid;
+
+	 kfree(p->kstack);
+	 p->kstack = 0;
+      //  freevm(p->pgdir);
+	 p->state = UNUSED;
+	 p->pid = 0;
+	 p->parent = 0;
+	 p->name[0] = 0;
+	 p->killed = 0;
+	 return pid;
+      }
+   }
+  
+
+  }
+  
 }
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
@@ -231,7 +322,15 @@ exit(void)
 {
   struct proc *p;
   int fd;
-
+ 
+  if(proc->isThread == 1)
+  {
+  	cprintf("CLONE exit\n");  
+  }
+  else
+  {
+	cprintf("Process exit\n");
+   }
   if(proc == initproc)
     panic("init exiting");
 
@@ -264,6 +363,8 @@ exit(void)
   proc->state = ZOMBIE;
   sched();
   panic("zombie exit");
+  
+
 }
 
 // Wait for a child process to exit and return its pid.
@@ -279,7 +380,7 @@ wait(void)
     // Scan through table looking for zombie children.
     havekids = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->parent != proc)
+      if(p->parent != proc || p->isThread==1)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){

@@ -29,13 +29,18 @@ int thread_create(void (*start_routine)(void*), void *arg)
 
   //invoke clone 
   int x=clone(start_routine,arg,stack);
+  
   printf(1,"Current pid %d thread %d \n",getpid(),x);
+  
+  
   //table(2d array) - maintain pid and memory region allocated (to enable freeing the stack)
   return 0;
 }
 
 int thread_join(int pid)
 {
+  int x=join(pid);
+  printf(1,"join pid %d\n",x);
     
   return 0;
 }
@@ -54,12 +59,18 @@ lock_release(lock_t *lock)
 int
 main(int argc, char *argv[])
 {
-  thread_create(sample,NULL);
+  int s=5;
+  void *p;
+  p=(void *)&s;
+  int x = thread_create(sample,p);
+  printf(1,"Inside main %d\n",x);
   //printf(1,"clone %d join %d",clone(NULL,NULL,NULL),join(0));
   exit();
 }
 
 void sample(void* a)
 {
-  printf(1,"sample in it ");
+  printf(1,"sample in it %d %d\n",*(int *)a,getpid());
+  //sleep(60);
+  exit();
 }
