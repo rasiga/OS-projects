@@ -17,7 +17,8 @@ USER_PROGS := \
 	usertests\
 	wc\
 	zombie\
-	threadlib
+	threadlib\
+	testing
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 

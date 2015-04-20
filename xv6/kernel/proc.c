@@ -165,6 +165,12 @@ clone(void(*fcn)(void*), void *arg, void *stack)
 ///////////// COPY OF FORK ///////////////////
   int i, pid;
   struct proc *np;
+  
+
+  if(stack == NULL || (uint)stack % PGSIZE != 0 || (uint)stack+PGSIZE > proc->sz)
+  {
+    return -1;
+  } 
 
   // Allocate process.
   if((np = allocproc()) == 0)
@@ -195,6 +201,20 @@ clone(void(*fcn)(void*), void *arg, void *stack)
   np->isThread=1;
  
 
+ void *retaddr, *args;
+  retaddr = stack + PGSIZE - 2 * sizeof(void*);
+  args = stack + PGSIZE - sizeof(void*);
+  *(uint *)retaddr = 0xFFFFFFFF;
+  *(uint *)args = (uint)arg;
+
+  np->tf->esp = (int)stack;
+  memmove((void *)np->tf->esp,stack,PGSIZE);
+  np->tf->esp +=  PGSIZE - 2 * sizeof(void*);
+  np->tf->ebp = np->tf->esp;
+  np->tf->eip = (uint)fcn;
+  
+
+
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -205,21 +225,6 @@ clone(void(*fcn)(void*), void *arg, void *stack)
       np->ofile[i] = filedup(proc->ofile[i]);
   np->cwd = idup(proc->cwd);
 
-  void *retaddr, *args;
-  retaddr = stack + PGSIZE - 2 * sizeof(void*);
-  args = stack + PGSIZE - sizeof(void*);
-  *(uint *)retaddr = 0xFFFFFFFF;
-  *(uint *)args = (uint)arg;
-
-  //np->tf = proc->tf;
-  
-  np->tf->esp = (int)stack;
-  //memmove((void *)np->tf->esp,stack,PGSIZE);
-
-
-  np->tf->esp +=  PGSIZE - 2 * sizeof(void*); 
-  //np->tf->ebp = np->tf->esp;
-  np->tf->eip = (int)fcn;
 
   pid = np->pid;
   np->state = RUNNABLE;
@@ -269,6 +274,7 @@ join(int pid)
    }
    else
    {
+	 cprintf("\nIn join getting pid");
    	 acquire(&ptable.lock);
 	 for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 		 if(p->pid == pid)
@@ -283,7 +289,7 @@ join(int pid)
 	       cprintf("PID Not found \n");
 	       return -1;
 	  }
-	  if(p->parent != proc->parent)
+	  if(p->pgdir != proc->pgdir)
 	  {
 		cprintf("Not same address \n");
 		return -1;

@@ -41,10 +41,13 @@ int thread_join(int pid)
 {
   int x=join(pid);
   printf(1,"join pid %d\n",x);
-    
+  // need to free stack  
   return 0;
 }
-
+void lock_init(lock_t *lock)
+{
+  
+}
 void 
 lock_acquire(lock_t *lock)
 {
@@ -56,6 +59,15 @@ lock_release(lock_t *lock)
 {
 	//FetchAndAdd(&lock->turn);
 }
+void cv_wait(cond_t *cond, lock_t *lock)
+{
+
+}
+void cv_signal(cond_t *cond)
+{
+
+}
+
 int
 main(int argc, char *argv[])
 {
