@@ -1,7 +1,23 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+
+typedef struct
+{
+  int ticket;
+  int turn;
+}lock_t;
+
+typedef struct
+{
+
+}cond_t;
+
+
+
+
 // Type definitions
+
 
 typedef unsigned int   uint;
 typedef unsigned short ushort;
