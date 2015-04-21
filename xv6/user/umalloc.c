@@ -108,13 +108,14 @@ int thread_create(void (*start_routine)(void*), void *arg)
   }
 
   //invoke clone 
-  int x=clone(start_routine,arg,stack);
+  int x=0;
+  x=clone(start_routine,arg,stack);
   
-  printf(1,"Current pid %d thread %d \n",getpid(),x);
+  //printf(1,"Current pid %d thread %d \n",getpid(),x);
   
   
   //table(2d array) - maintain pid and memory region allocated (to enable freeing the stack)
-  return 0;
+  return x;
 }
 
 inline int fetch_and_add( int * variable, int value ) {
@@ -128,9 +129,9 @@ inline int fetch_and_add( int * variable, int value ) {
 int thread_join(int pid)
 {
   int x=join(pid);
-  printf(1,"join pid %d\n",x);
+  //printf(1,"join pid %d\n",x);
   // need to free stack  
-  return 0;
+  return x;
 }
 void lock_init(lock_t *lock)
 {

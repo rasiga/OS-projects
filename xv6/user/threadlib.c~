@@ -2,7 +2,6 @@
 #include "stat.h"
 #include "user.h"
 
-#define PGSIZE 4096
 struct mem
 {
 	int pid;
@@ -16,8 +15,9 @@ main(int argc, char *argv[])
   int s=5;
   void *p;
   p=(void *)&s;
-  int x = thread_create(sample,p);
-  printf(1,"Inside main %d\n",x);
+  int x=9;
+  x = thread_create(sample,p);
+ // printf(1,"Inside main %d\n",x);
   //printf(1,"clone %d join %d",clone(NULL,NULL,NULL),join(0));
   exit();
 }

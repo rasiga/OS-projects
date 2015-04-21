@@ -34,7 +34,6 @@ main(int argc, char *argv[])
    int i;
    for (i = 0; i < num_threads; i++) {
       int thread_pid = thread_create(worker, 0);
-      //printf(1,"Thread id is %d\n",thread_pid);
       assert(thread_pid > 0);
    }
 
