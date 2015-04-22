@@ -110,7 +110,7 @@ sys_clone(void)
   }
 
   j = clone(func,arg,stack);
-  cprintf("j is %d\n",j);
+  //cprintf("j is %d\n",j);
   return j;
 }
 int

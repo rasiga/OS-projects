@@ -1,4 +1,4 @@
-/* test lock correctness */
+/* child thread joining on another child thread */
 #include "types.h"
 #include "user.h"
 
@@ -8,11 +8,7 @@
 #define PGSIZE (4096)
 
 int ppid;
-int global = 0;
-lock_t lock;
-int num_threads = 30;
-int loops = 1000;
-
+int num_threads = 16;
 
 #define assert(x) if (x) {} else { \
    printf(1, "%s: %d ", __FILE__, __LINE__); \
@@ -23,41 +19,66 @@ int loops = 1000;
 }
 
 void worker(void *arg_ptr);
+void worker_reaper(void *arg_ptr);
 
 int
 main(int argc, char *argv[])
 {
+   int i;
    ppid = getpid();
 
-   lock_init(&lock);
+   int arg = num_threads / 2;
 
-   int i;
-   for (i = 0; i < num_threads; i++) {
-      int thread_pid = thread_create(worker, 0);
-      assert(thread_pid > 0);
+   for(i = 0; i < num_threads; i++)
+   {
+   	int thread_pid = thread_create(worker, (void *)arg);
+	//printf(1,"In for loop 1\n");
+	assert(thread_pid > 0);
    }
 
-   for (i = 0; i < num_threads; i++) {
-      int join_pid = thread_join(-1);
-      assert(join_pid > 0);
-   }
+   int thread_pid = thread_create(worker_reaper, (void *)arg);
+    //printf(1,"outside for loop 1 %d\n",thread_pid);
 
-   assert(global == num_threads * loops);
+   assert(thread_pid > 0);
+
+   sleep(100);
+
+   for(i = 0; i < arg + 1; i++)
+   {
+	printf(1,"Before join\n");
+   	int join_pid = thread_join(-1);
+	 printf(1,"In for loop 2 %d\n",join_pid);
+   	assert(join_pid > 0);
+   }
 
    printf(1, "TEST PASSED\n");
    exit();
 }
 
 void
-worker(void *arg_ptr) {
-   int i, j, tmp;
-   for (i = 0; i < loops; i++) {
-      lock_acquire(&lock);
-      tmp = global;
-      for(j = 0; j < 50; j++); // take some time
-      global = tmp + 1;
-      lock_release(&lock);
+worker_reaper(void *arg_ptr) {
+   int arg = (int)arg_ptr;
+   int i;
+
+   for(i = 0; i < arg; i++)
+   {
+   	int join_pid = thread_join(-1);
+	printf(1,"In for loop 3 %d\n",join_pid);
+   	assert(join_pid > 0);
    }
+
    exit();
 }
 
+void
+worker(void *arg_ptr) {
+   int i;
+   int tmp = 0;
+
+   for(i = 0; i < 10000; i++)
+	tmp++;
+
+   sleep(100);
+
+   exit();
+}

@@ -229,7 +229,7 @@ clone(void(*fcn)(void*), void *arg, void *stack)
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
-  cprintf("CLONE finished %d\n",pid);  
+  //cprintf("CLONE finished %d\n",pid);  
   return pid;
 
 
@@ -265,16 +265,16 @@ join(int pid)
   		      		return pid;
   	    		}
   	  	  }
-  	  	  if(!havekids || proc->killed){
+  	  	  /*if(!havekids || proc->killed){
   	    		release(&ptable.lock);
   	    		return -1;
- 	   	  }
+ 	   	  }*/
     		  sleep(proc, &ptable.lock);  //DOC: wait-sleep
   	     }
    }
    else
    {
-	 cprintf("\nIn join getting pid");
+	 //cprintf("\nIn join getting pid");
    	 acquire(&ptable.lock);
 	 for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 		 if(p->pid == pid)
@@ -329,14 +329,14 @@ exit(void)
   struct proc *p;
   int fd;
  
-  if(proc->isThread == 1)
+  /*if(proc->isThread == 1)
   {
   	cprintf("CLONE exit\n");  
   }
   else
   {
 	cprintf("Process exit\n");
-   }
+   }*/
   if(proc == initproc)
     panic("init exiting");
 
@@ -362,6 +362,12 @@ exit(void)
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
+     if(p->parent == proc && p->isThread==1)
+     {
+	kill(p->pid);
+        join(p->pid);
+     }
+
     }
   }
 

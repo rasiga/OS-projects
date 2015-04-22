@@ -17,6 +17,16 @@ union header {
   Align x;
 };
 
+int mem_num=0;
+typedef struct
+{
+	int pids;
+	void* stacks;
+	int alloc;
+}mem_table;
+
+mem_table table[400];
+//void *stack=NULL;
 typedef union header Header;
 
 static Header base;
@@ -110,7 +120,10 @@ int thread_create(void (*start_routine)(void*), void *arg)
   //invoke clone 
   int x=0;
   x=clone(start_routine,arg,stack);
-  
+  table[mem_num].pids=x;
+  table[mem_num].stacks = stack;
+  table[mem_num].alloc=1;
+  mem_num++;  
   //printf(1,"Current pid %d thread %d \n",getpid(),x);
   
   
@@ -128,9 +141,20 @@ inline int fetch_and_add( int * variable, int value ) {
 
 int thread_join(int pid)
 {
+  int i;
   int x=join(pid);
   //printf(1,"join pid %d\n",x);
-  // need to free stack  
+  //free(stack);
+  // need to free stack 
+  for(i=0;i<mem_num;i++)
+  {
+    if(table[i].pids == x && table[i].alloc == 1)
+    {
+        table[i].alloc=0;
+	free(table[i].stacks);
+	break;
+    }
+  } 
   return x;
 }
 void lock_init(lock_t *lock)
