@@ -1,14 +1,14 @@
-/*call sbrk from clone and see changes in parent */
+/* parent exit must kill all threads */
 #include "types.h"
 #include "user.h"
 
 #undef NULL
 #define NULL ((void*)0)
 
-int ppid;
 #define PGSIZE (4096)
 
-volatile int global = 1;
+int ppid;
+int global = 1;
 
 #define assert(x) if (x) {} else { \
    printf(1, "%s: %d ", __FILE__, __LINE__); \
@@ -23,33 +23,41 @@ void worker(void *arg_ptr);
 int
 main(int argc, char *argv[])
 {
+   int i;
    ppid = getpid();
-   void *stack = malloc(PGSIZE*2);
-   assert(stack != NULL);
-   if((uint)stack % PGSIZE)
-     stack = stack + (4096 - (uint)stack % PGSIZE);
+   int thread_pid;
 
-   void *before = sbrk(0);
-   int clone_pid = clone(worker, 0, stack);
-   assert(clone_pid > 0);
-   while(global != 5);
-   void *after = sbrk(0);
-   printf(1,"OLD %p NEW %p \n",before,after);
-   assert (after > before);
-   printf(1, "TEST PASSED\n");
-   exit();
+   int spid = fork();
+   if (spid > 0)
+   {
+      wait();
+      sleep(5);
+      int tpid = fork();
+      if (tpid == 0)
+      {
+         while(1);
+      }
+      else
+      {
+         assert (tpid == 4);
+      }
+
+      printf(1, "TEST PASSED\n");
+      exit();
+   }
+   else
+   {
+      for (i = 0; i < 5; ++i)
+      {
+         thread_pid = thread_create(worker, 0);
+      }
+      exit();
+   }
 }
 
 void
 worker(void *arg_ptr) {
-   assert(global == 1);
-   void *s=sbrk(1024);
-   printf(1,"Worker %p\n",s);
-   sleep(2);
-   global = 5;
-   sleep(5);
+   while(1);
    exit();
 }
-
-
 

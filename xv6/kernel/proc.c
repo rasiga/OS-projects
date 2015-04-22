@@ -110,9 +110,9 @@ int
 growproc(int n)
 {
   uint sz;
-  cprintf("Before acquire\n"); 
+//  cprintf("Before acquire\n"); 
   acquire(&locksbrk); 
-  cprintf("After acquire\n");
+ // cprintf("After acquire\n");
   
   sz = proc->sz;
   if(n > 0){
@@ -134,7 +134,7 @@ growproc(int n)
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 
-       if(p->parent == proc && p->pgdir == proc->pgdir)
+       if(/*p->parent == proc &&*/ p->pgdir == proc->pgdir)
 
         	p->sz=proc->sz;
 
@@ -143,9 +143,9 @@ growproc(int n)
 
     release(&ptable.lock);
 
-  cprintf("Before release\n");
+ // cprintf("Before release\n");
   release(&locksbrk);
-  cprintf("After release\n");
+ // cprintf("After release\n");
   
   switchuvm(proc);
   //release(&locksbrk);
@@ -389,15 +389,18 @@ exit(void)
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == proc){
+   if(p->parent == proc && p->isThread==1)
+     {
+        cprintf("parent will kill children\n");
+        kill(p->pid);
+        join(p->pid);
+	continue;
+     }
+ 
+   if(p->parent == proc){
       p->parent = initproc;
       if(p->state == ZOMBIE)
         wakeup1(initproc);
-     if(p->parent == proc && p->isThread==1)
-     {
-	kill(p->pid);
-        join(p->pid);
-     }
 
     }
   }
