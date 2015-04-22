@@ -117,6 +117,24 @@ growproc(int n)
       return -1;
   }
   proc->sz = sz;
+  
+  struct proc *p;
+  acquire(&ptable.lock);
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+
+       if(p->parent == proc && p->pgdir == proc->pgdir)
+
+        	p->sz=proc->sz;
+
+
+      }
+
+    release(&ptable.lock);
+
+
+
+
   switchuvm(proc);
   return 0;
 }
@@ -370,7 +388,7 @@ exit(void)
 
     }
   }
-
+ 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
   sched();

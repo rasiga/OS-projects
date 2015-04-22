@@ -1,4 +1,4 @@
-/* child thread joining on another child thread */
+/* check that address space size is updated in threads */
 #include "types.h"
 #include "user.h"
 
@@ -8,7 +8,11 @@
 #define PGSIZE (4096)
 
 int ppid;
-int num_threads = 16;
+int global = 0;
+unsigned int size = 0;
+lock_t lock, lock2;
+int num_threads = 30;
+
 
 #define assert(x) if (x) {} else { \
    printf(1, "%s: %d ", __FILE__, __LINE__); \
@@ -19,36 +23,50 @@ int num_threads = 16;
 }
 
 void worker(void *arg_ptr);
-void worker_reaper(void *arg_ptr);
 
 int
 main(int argc, char *argv[])
 {
-   int i;
    ppid = getpid();
 
-   int arg = num_threads / 2;
+   int arg = 101;
+   void *arg_ptr = &arg;
 
-   for(i = 0; i < num_threads; i++)
-   {
-   	int thread_pid = thread_create(worker, (void *)arg);
-	//printf(1,"In for loop 1\n");
-	assert(thread_pid > 0);
+   lock_init(&lock);
+   lock_init(&lock2);
+   lock_acquire(&lock);
+   lock_acquire(&lock2);
+
+   int i;
+   for (i = 0; i < num_threads; i++) {
+      int thread_pid = thread_create(worker, arg_ptr);
+      assert(thread_pid > 0);
    }
 
-   int thread_pid = thread_create(worker_reaper, (void *)arg);
-    //printf(1,"outside for loop 1 %d\n",thread_pid);
+   size = (unsigned int)sbrk(0);
 
-   assert(thread_pid > 0);
+   while (global < num_threads) {
+      lock_release(&lock);
+      sleep(100);
+      lock_acquire(&lock);
+   }
 
-   sleep(100);
+   global = 0;
+   sbrk(10000);
+   size = (unsigned int)sbrk(0);
+   lock_release(&lock);
 
-   for(i = 0; i < arg + 1; i++)
-   {
-	printf(1,"Before join\n");
-   	int join_pid = thread_join(-1);
-	 printf(1,"In for loop 2 %d\n",join_pid);
-   	assert(join_pid > 0);
+   while (global < num_threads) {
+      lock_release(&lock2);
+      sleep(100);
+      lock_acquire(&lock2);
+   }
+   lock_release(&lock2);
+
+
+   for (i = 0; i < num_threads; i++) {
+      int join_pid = thread_join(-1);
+      assert(join_pid > 0);
    }
 
    printf(1, "TEST PASSED\n");
@@ -56,29 +74,17 @@ main(int argc, char *argv[])
 }
 
 void
-worker_reaper(void *arg_ptr) {
-   int arg = (int)arg_ptr;
-   int i;
-
-   for(i = 0; i < arg; i++)
-   {
-   	int join_pid = thread_join(-1);
-	printf(1,"In for loop 3 %d\n",join_pid);
-   	assert(join_pid > 0);
-   }
-
-   exit();
-}
-
-void
 worker(void *arg_ptr) {
-   int i;
-   int tmp = 0;
+   lock_acquire(&lock);
+   assert((unsigned int)sbrk(0) == size);
+   global++;
+   lock_release(&lock);
 
-   for(i = 0; i < 10000; i++)
-	tmp++;
-
-   sleep(100);
+   lock_acquire(&lock2);
+   assert((unsigned int)sbrk(0) == size);
+   global++;
+   lock_release(&lock2);
 
    exit();
 }
+
