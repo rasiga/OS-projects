@@ -17,7 +17,7 @@ main(int argc, char *argv[])
   p=(void *)&s;
   int x=0;
   x = thread_create(sample,p);
- // printf(1,"Inside main %d\n",x);
+  printf(1,"Inside main %d\n",x);
   //printf(1,"clone %d join %d",clone(NULL,NULL,NULL),join(0));
   exit();
 }

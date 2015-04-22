@@ -11,6 +11,8 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+struct spinlock locksbrk;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -23,6 +25,7 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  initlock(&locksbrk,"sbrk");
 }
 
 // Look in the process table for an UNUSED proc.
@@ -107,14 +110,22 @@ int
 growproc(int n)
 {
   uint sz;
+  cprintf("Before acquire\n"); 
+  acquire(&locksbrk); 
+  cprintf("After acquire\n");
   
   sz = proc->sz;
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
-      return -1;
+      {
+        release(&locksbrk);
+        return -1;
+      }
   } else if(n < 0){
     if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
-      return -1;
+      {  release(&locksbrk);
+	  return -1;
+      }
   }
   proc->sz = sz;
   
@@ -132,10 +143,12 @@ growproc(int n)
 
     release(&ptable.lock);
 
-
-
-
+  cprintf("Before release\n");
+  release(&locksbrk);
+  cprintf("After release\n");
+  
   switchuvm(proc);
+  //release(&locksbrk);
   return 0;
 }
 
