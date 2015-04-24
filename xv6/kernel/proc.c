@@ -392,8 +392,20 @@ exit(void)
    if(p->parent == proc && p->isThread==1)
      {
         cprintf("parent will kill children\n");
-        kill(p->pid);
-        join(p->pid);
+        p->killed = 1;
+      // Wake process from sleep if necessary.
+             if(p->state == SLEEPING)
+                     p->state = RUNNABLE;
+        cprintf("Calling join\n");                    
+        kfree(p->kstack);
+         p->kstack = 0;
+      //  freevm(p->pgdir);
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+                                                     
 	continue;
      }
  

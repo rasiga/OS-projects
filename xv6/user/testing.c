@@ -28,18 +28,20 @@ main(int argc, char *argv[])
    int thread_pid;
 
    int spid = fork();
+
    if (spid > 0)
    {
       wait();
-      sleep(5);
-      int tpid = fork();
-      if (tpid == 0)
+
+      /*
+       * 50 threads are spawned again. This will
+       * pass only if the child process (with 50
+       * threads) exited properly.
+       */ 
+      for (i = 0; i < 50; ++i)
       {
-         while(1);
-      }
-      else
-      {
-         assert (tpid == 4);
+         thread_pid = thread_create(worker, 0);
+	 assert(thread_pid > 0);
       }
 
       printf(1, "TEST PASSED\n");
@@ -47,7 +49,11 @@ main(int argc, char *argv[])
    }
    else
    {
-      for (i = 0; i < 5; ++i)
+      /* 
+       * Spawn 50 threads and all threads should be 
+       * killed during exit 
+       */
+      for (i = 0; i < 50; ++i)
       {
          thread_pid = thread_create(worker, 0);
       }
