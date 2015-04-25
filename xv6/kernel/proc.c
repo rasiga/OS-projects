@@ -415,11 +415,12 @@ exit(void)
         wakeup1(initproc);
 
     }
-  }
- 
+  } 
+
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
   sched();
+  release(&ptable.lock); 
   panic("zombie exit");
   
 
