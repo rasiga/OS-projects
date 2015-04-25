@@ -176,11 +176,55 @@ lock_release(lock_t *lock)
 }
 void cv_wait(cond_t *cond, lock_t *lock)
 {
+	//initialize the queue if not done before
+	if(cond->init==0)
+        {
+                cond->head=malloc(sizeof(struct node));
+                cond->head->next=NULL;
+                cond->init=1;
 
+        }
+	else
+	{
+		//create a new node at the end of the waitlist
+		struct node * temp = malloc(sizeof(struct node));
+		temp->next = NULL;
+		struct node* temp2 = cond->head;
+		if(cond->head != NULL)
+		{
+			while(temp2->next!=NULL)
+				temp2=temp2->next;
+			temp2->next=temp;
+		}
+		else
+		{
+			cond->head=malloc(sizeof(struct node));
+                	cond->head->next=NULL;
+		}
+		
+	}
+	//lock_release(lock);
+	//queue yourself, release lock, sleep
+	cvwait(cond,lock);
+	//acquire lock again
+	lock_acquire(lock);
 }
 void cv_signal(cond_t *cond)
 {
+       if(cond->init==0)
+        {
+                cond->head=malloc(sizeof(struct node));
+                cond->head->next=NULL;
+                cond->init=1;
 
+        }
+	
+	if(cond->head == NULL)
+	{
+		printf(1,"Empty queue\n");
+		return;
+	}
+	cvsignal(cond);
 }
 
 

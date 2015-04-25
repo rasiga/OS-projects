@@ -122,3 +122,34 @@ sys_join(void)
   return join(pid);
 
 }
+
+int
+sys_cvwait(void)
+{
+  void *cond;
+  void *lock;
+  if(argptr(0,(char**)&cond,sizeof(cond))<0)
+  {
+        return -1;
+  }
+  if(argptr(1,(char**)&lock,sizeof(lock))<0)
+  {
+        return -1;
+  }
+
+  cvwait(cond,lock);
+  return 0;
+}
+
+int
+sys_cvsignal(void)
+{
+  void *cond;
+  if(argptr(0,(char**)&cond,sizeof(cond))<0)
+  {
+        return -1;
+  }
+  cvsignal(cond);
+  return 0;
+}
+

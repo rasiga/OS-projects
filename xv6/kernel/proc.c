@@ -585,6 +585,54 @@ sleep(void *chan, struct spinlock *lk)
     acquire(lk);
   }
 }
+inline int fetch_and_add( int * variable, int value ) {
+      asm volatile("lock; xaddl %%eax, %2;"
+                   :"=a" (value)                  //Output
+                   :"a" (value), "m" (*variable)  //Input
+                   :"memory");
+      return value;
+  }
+
+void
+cvwait(cond_t* cond, lock_t* lock)
+{
+	//int value = 1;
+	
+	    struct node* temp=cond->head;
+	    if(temp!=NULL)
+	    {
+	    while(temp->next!=NULL)
+			temp=temp->next;
+	    }
+	    //queue yourself to waitlist
+	    temp->p=proc;
+
+	//release the lock
+	fetch_and_add(&lock->turn,1);
+
+
+
+	//copied relevant parts from sleep
+	if(proc == 0)
+	  panic("sleep");
+	acquire(&ptable.lock);
+	proc->chan = proc;
+	proc->state = SLEEPING;
+	sched();
+	proc->chan = 0;
+	release(&ptable.lock);
+}
+
+void
+cvsignal(cond_t* cond)
+{
+	//wakeup the first waiting process
+	if(cond->head->p!=NULL)
+	   wakeup(cond->head->p);
+	//take the process out of the waitlist
+	cond->head = cond->head->next;
+}
+
 
 // Wake up all processes sleeping on chan.
 // The ptable lock must be held.

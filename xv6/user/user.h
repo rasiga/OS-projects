@@ -28,6 +28,8 @@ int sleep(int);
 int uptime(void);
 int clone(void(*fcn)(void*), void *arg, void *stack);
 int join(int pid);
+void cvwait(cond_t*,lock_t*);
+void cvsignal(cond_t*);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);

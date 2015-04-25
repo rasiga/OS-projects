@@ -8,9 +8,17 @@ typedef struct
   int turn;
 }lock_t;
 
+struct node
+{
+	 struct proc *p;
+         struct node *next;
+};
+
+
 typedef struct
 {
-
+    int init;
+    struct node *head;
 }cond_t;
 
 

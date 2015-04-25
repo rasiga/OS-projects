@@ -25,4 +25,6 @@ int sys_write(void);
 int sys_uptime(void);
 int sys_clone(void);
 int sys_join(void);
+int sys_cvwait(void);
+int sys_cvsignal(void);
 #endif // _SYSFUNC_H_
