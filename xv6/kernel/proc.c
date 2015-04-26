@@ -359,15 +359,7 @@ exit(void)
 {
   struct proc *p;
   int fd;
- 
-  /*if(proc->isThread == 1)
-  {
-  	cprintf("CLONE exit\n");  
-  }
-  else
-  {
-	cprintf("Process exit\n");
-   }*/
+
   if(proc == initproc)
     panic("init exiting");
 
@@ -381,21 +373,33 @@ exit(void)
 
   iput(proc->cwd);
   proc->cwd = 0;
-
-  acquire(&ptable.lock);
-
+  
+  //acquire(&ptable.lock);
+  cprintf("Lock acquired in exit\n");
   // Parent might be sleeping in wait().
   wakeup1(proc->parent);
-
+  cprintf("Wakeup the parent\n");
+  acquire(&ptable.lock);
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
    if(p->parent == proc && p->isThread==1)
      {
         cprintf("parent will kill children\n");
+	release(&ptable.lock);
+	cprintf("Lock released in exit\n");
+	kill(p->pid);
+	cprintf("Thread killed in exit\n");
+	/*join(p->pid);
+	cprintf("Wait over for killed thread in exit\n");
+	acquire(&ptable.lock);
+	cprintf("Lock acquired in exit for loop\n");
+*/	/*
         p->killed = 1;
       // Wake process from sleep if necessary.
              if(p->state == SLEEPING)
                      p->state = RUNNABLE;
+	*/
+	acquire(&ptable.lock);
         cprintf("Calling join\n");                    
         kfree(p->kstack);
          p->kstack = 0;
@@ -410,17 +414,23 @@ exit(void)
      }
  
    if(p->parent == proc){
+      cprintf("Dealing with children process\n");
       p->parent = initproc;
       if(p->state == ZOMBIE)
+      {
         wakeup1(initproc);
+	
+	}
 
     }
   } 
 
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
+  cprintf("Calling schedule\n");
   sched();
   release(&ptable.lock); 
+  //cprintf("LOck released finally");
   panic("zombie exit");
   
 
@@ -663,14 +673,16 @@ int
 kill(int pid)
 {
   struct proc *p;
-
+  
   acquire(&ptable.lock);
+  cprintf("Lock acquired in kill\n");
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING)
         p->state = RUNNABLE;
+      cprintf("Lock released in kill\n");
       release(&ptable.lock);
       return 0;
     }
