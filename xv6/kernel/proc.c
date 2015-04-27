@@ -374,33 +374,43 @@ exit(void)
   iput(proc->cwd);
   proc->cwd = 0;
   
-  //acquire(&ptable.lock);
+  acquire(&ptable.lock);
   cprintf("Lock acquired in exit\n");
   // Parent might be sleeping in wait().
-  wakeup1(proc->parent);
+  //
+  
+  
+  //wakeup1(proc->parent);
   cprintf("Wakeup the parent\n");
-  acquire(&ptable.lock);
+  //acquire(&ptable.lock);
   // Pass abandoned children to init.
+  //if(proc->isThread==0)
+ 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
    if(p->parent == proc && p->isThread==1)
      {
-        cprintf("parent will kill children\n");
+    /*    cprintf("parent will kill children\n");
 	release(&ptable.lock);
 	cprintf("Lock released in exit\n");
 	kill(p->pid);
+	acquire(&ptable.lock);
 	cprintf("Thread killed in exit\n");
-	/*join(p->pid);
+	join(p->pid);
 	cprintf("Wait over for killed thread in exit\n");
 	acquire(&ptable.lock);
 	cprintf("Lock acquired in exit for loop\n");
-*/	/*
+	*/
         p->killed = 1;
       // Wake process from sleep if necessary.
              if(p->state == SLEEPING)
                      p->state = RUNNABLE;
-	*/
-	acquire(&ptable.lock);
-        cprintf("Calling join\n");                    
+	while(p->state!=ZOMBIE){
+		sleep(proc,&ptable.lock);
+	}
+
+	
+        //cprintf("Calling join\n");  
+	                  
         kfree(p->kstack);
          p->kstack = 0;
       //  freevm(p->pgdir);
@@ -409,27 +419,34 @@ exit(void)
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
-                                                     
+          
+	/*release(&ptable.lock);
+	join(p->pid);         
+	acquire(&ptable.lock);       */                           
 	continue;
      }
  
-   if(p->parent == proc){
+  }
+    wakeup1(proc->parent);
+
+   if(proc->isThread==0)
+   {
+   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+   if(p->parent == proc && p->isThread==0){
       cprintf("Dealing with children process\n");
       p->parent = initproc;
       if(p->state == ZOMBIE)
       {
         wakeup1(initproc);
-	
-	}
-
-    }
-  } 
-
+      }
+   }
+  }
+  }
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
   cprintf("Calling schedule\n");
   sched();
-  release(&ptable.lock); 
+  //release(&ptable.lock); 
   //cprintf("LOck released finally");
   panic("zombie exit");
   
