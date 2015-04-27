@@ -375,17 +375,18 @@ exit(void)
   proc->cwd = 0;
   
   acquire(&ptable.lock);
-  cprintf("Lock acquired in exit\n");
+  //cprintf("Lock acquired in exit\n");
   // Parent might be sleeping in wait().
   //
   
   
   //wakeup1(proc->parent);
-  cprintf("Wakeup the parent\n");
+  //cprintf("Wakeup the parent\n");
   //acquire(&ptable.lock);
   // Pass abandoned children to init.
   //if(proc->isThread==0)
- 
+  if(proc->isThread==0)
+  {
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
    if(p->parent == proc && p->isThread==1)
      {
@@ -427,6 +428,7 @@ exit(void)
      }
  
   }
+  }
     wakeup1(proc->parent);
 
    if(proc->isThread==0)
@@ -444,7 +446,7 @@ exit(void)
   }
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
-  cprintf("Calling schedule\n");
+//  cprintf("Calling schedule\n");
   sched();
   //release(&ptable.lock); 
   //cprintf("LOck released finally");
