@@ -6,7 +6,17 @@
 #include <fcntl.h>
 #include <stdlib.h>
 
+int numoflevels(char num[])
+{
+	int i,nums=0;
+	for(i=0;i<strlen(num);i++)
+	{
+		if(num[i]=='/')
+			nums++;
+	}
+	return nums;
 
+}
 
 int main(int argc, char* arg[])
 {
@@ -32,32 +42,18 @@ int main(int argc, char* arg[])
    	strcpy(path,arg[2]);
    	strcpy(img,arg[3]);
 	//open file and create basic lfs structure
-	 printf("\n Path is %s",path);
 	int nlevel=0;
 	int begin=0,end=0;
-	char *entries[3];
+	int nums=numoflevels(path);
+	char *entries[nums];
 	char *token;
 	token=strtok(path,"/");
 	while(token!=NULL)
 	{
-		//entries[nlevel++]=token;
+		entries[nlevel]=token;
 		token=strtok(NULL,"/");
+		nlevel++;
 	}
-	/*for(i=0;i<nlevel;i++)
-	{
-		printf("\n%s",entries[i]);
-		
-	}
-	if(i==nlevel)
-		return -1;*/
-	entries[0]=strdup("nested");
-        entries[1]=strdup("directory");
-        entries[2]=strdup("example");
-	entries[3]=strdup("sample.c");
-	//entries[0]=strdup("code");
-	//entries[1]=strdup("a.out");
-
-
 	
 	//strcpy(img,"example.img");
 	int lfs=open(img,O_RDONLY);
@@ -107,7 +103,7 @@ int main(int argc, char* arg[])
         /////////////  Root inode is  
 	int level=0;
 	// find the directory
-	while((level<3 && strcmp(cmd,"ls")) || (level<3 && strcmp(cmd,"cat")))
+	while((level<nlevel-1 && strcmp(cmd,"ls")) || (level<nlevel-1 && strcmp(cmd,"cat")))
 	{
 		level++;
 		dirEnt *dir=malloc(sizeof(dirEnt));
