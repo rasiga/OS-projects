@@ -22,18 +22,18 @@ int main(int argc, char* arg[])
 {
 	int i,j,n,num_ptr;
 	int BLOCKSIZE=4096;
+	// make sure format is right
+	if(argc!=4)
+        {
+                printf("Error!\n");
+                return -1; 
+        }
 	char cmd[strlen(arg[1])];
         char path[strlen(arg[2])];
         char img[strlen(arg[3])];
        	inodeMap *imap[INODEPIECES];
 	int inodes[4096];
 	int index=0,k;
-	// make sure format is right
-	if(argc!=4)
-	{
-		printf("Error!\n");
-      		return -1; 
-	}
 	// Assign variables values from cmd args
 	strcpy(cmd,arg[1]);
    	strcpy(path,arg[2]);
