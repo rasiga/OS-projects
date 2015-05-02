@@ -63,6 +63,11 @@ int main(int argc, char* arg[])
 		return -1;	
 	}
 	//the first part of fs is the cr region
+	if(strcmp(cmd,"ls")==0)
+	{
+		printf("\nls ");
+		nlevel++;
+	}
 	checkpoint *cr=malloc(sizeof(checkpoint));
 	n=(read(lfs,cr,sizeof(checkpoint)));
 	if(n<0)
