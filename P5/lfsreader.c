@@ -31,16 +31,19 @@ int main(int argc, char* arg[])
 	// make sure format is right
 	if(argc!=4)
 	{
-		printf("\nError!\\n");
-		printf("\nCommand should be");
-		printf("\ncat    \'absolute pathname for a file\'   \'lfs image\'");
-		printf("\nls    \'absolute pathname for a directory\'   \'lfs image\'");
+		printf("Error!\n");
       		return -1; 
 	}
 	// Assign variables values from cmd args
 	strcpy(cmd,arg[1]);
    	strcpy(path,arg[2]);
    	strcpy(img,arg[3]);
+	if((strcmp(cmd,"ls")&&strcmp(cmd,"cat"))!=0)
+        {
+                printf("Error!\n");
+                return -1;
+        }
+
 	//open file and create basic lfs structure
 	int nlevel=0;
 	int begin=0,end=0;
@@ -59,20 +62,20 @@ int main(int argc, char* arg[])
 	int lfs=open(img,O_RDONLY);
 	if(lfs==-1)
 	{
-		printf("\nFile not found");
-		return -1;	
+                printf("Error!\n");
+        	return -1;
 	}
 	//the first part of fs is the cr region
 	if(strcmp(cmd,"ls")==0)
 	{
-		printf("\nls ");
+		//printf("\nls ");
 		nlevel++;
 	}
 	checkpoint *cr=malloc(sizeof(checkpoint));
 	n=(read(lfs,cr,sizeof(checkpoint)));
 	if(n<0)
 	{
-		printf("\nError!\\n");
+		printf("Error!\n");
 	}
 	int sum=0;
 	
@@ -140,30 +143,46 @@ int main(int argc, char* arg[])
 		if(find==1)
 			break;
 		}
+		if(find==0)
+                {
+                        printf("Error!\n");
+                        return -1;
+                }
+	
 
 	}
 	// inodelevel has the right directory
 	if(strcmp(cmd,"ls")==0)
 	{
-		dirEnt *dir=malloc(sizeof(dirEnt));
-		j=lseek(lfs,0,SEEK_SET);
-        	j=lseek(lfs,inodelevel->ptr[0],SEEK_SET);
-        	for(i=0;i<64;i++)
-        	{
-        		read(lfs,dir,sizeof(dirEnt));
-                	if(dir->inum==-1)
-                		continue;
-			printf("%s\n",dir->name,dir->inum);
+		if(inodelevel->type==1)
+		{
+			printf("Error!\n");
+			return -1;
+		}
+		int pointers=inodelevel->size/BLOCKSIZE;
+                for(num_ptr=0;num_ptr<pointers;num_ptr++)
+                {
+			dirEnt *dir=malloc(sizeof(dirEnt));
+			j=lseek(lfs,0,SEEK_SET);
+        		j=lseek(lfs,inodelevel->ptr[num_ptr],SEEK_SET);
+        		for(i=0;i<64;i++)
+        		{
+        			read(lfs,dir,sizeof(dirEnt));
+                		if(dir->inum==-1)
+                			continue;
+				printf("%s\n",dir->name,dir->inum);
+			}
 		}
 	}
 	else if(strcmp(cmd,"cat")==0)
         {
                 dirEnt *dir=malloc(sizeof(dirEnt));
 		int pointers=inodelevel->size/BLOCKSIZE;
+		int find=0;
 		for(num_ptr=0;num_ptr<pointers;num_ptr++)
 		{		
                 	j=lseek(lfs,0,SEEK_SET);
-                	j=lseek(lfs,inodelevel->ptr[0],SEEK_SET);
+                	j=lseek(lfs,inodelevel->ptr[num_ptr],SEEK_SET);
                 	for(i=0;i<64;i++)
                 	{
                         	read(lfs,dir,sizeof(dirEnt));
@@ -171,16 +190,22 @@ int main(int argc, char* arg[])
                                 	continue;
 				if(strcmp(entries[level],dir->name)==0)
                         	{	
-					printf("\n%s %d",dir->name,dir->inum);
+
+					//printf("\n%s %d",dir->name,dir->inum);
 				
 					//inode of file set to new
 					j=lseek(lfs,0,SEEK_SET);
         	                       	j=lseek(lfs,inodes[dir->inum],SEEK_SET);
 	                        	inode *new=malloc(sizeof(inode));
                                 	read(lfs,new,sizeof(inode));
-
+					if(new->type==0)
+                                        {
+	                                        printf("Error!\n");
+        	                                return -1;
+                                        }
+					find=1;
 					// file contenet is at data
-					printf("\t Size %d",new->size);
+				//	printf("\t Size %d",new->size);
 					int fileptrs;
 					pointers=new->size/BLOCKSIZE;
 					if(pointers==0)
@@ -198,25 +223,15 @@ int main(int argc, char* arg[])
 				}
                 	}
 		}
+		if(find==0)
+                {
+                        printf("Error!\n");
+                        return -1;
+                }
+
 
         }
 
-	
-	/*
-	// check which command is used
-	if(strcmp(cmd,"ls")==0)
-	{
-	}
-	else if(strcmp(cmd,"cat")==0)
-        {
-        }
-	else
-	{
-		printf("\nError!\\n");
-		return -1;
-	}
-	*/
-	//printf("\n%s %s %s",cmd,path,img);
 	return 1;
 
 
