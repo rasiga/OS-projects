@@ -117,6 +117,8 @@ int main(int argc, char* arg[])
 		dirEnt *dir=malloc(sizeof(dirEnt));
 		//printf(" Size %d No of directory entries %d No of directories per block %d \n",inodelevel->size,inodelevel->size/sizeof(dirEnt),BLOCKSIZE/(sizeof(dirEnt)));
 		int pointers=inodelevel->size/BLOCKSIZE;
+		if(inodelevel->size%BLOCKSIZE!=0)
+			pointers++;					
 		int find=0;	
 		for(num_ptr=0;num_ptr<pointers;num_ptr++)
 		{
@@ -160,7 +162,9 @@ int main(int argc, char* arg[])
 			return -1;
 		}
 		int pointers=inodelevel->size/BLOCKSIZE;
-                for(num_ptr=0;num_ptr<pointers;num_ptr++)
+                if(inodelevel->size%BLOCKSIZE!=0)
+			pointers++;					
+		for(num_ptr=0;num_ptr<pointers;num_ptr++)
                 {
 			dirEnt *dir=malloc(sizeof(dirEnt));
 			j=lseek(lfs,0,SEEK_SET);
@@ -170,16 +174,18 @@ int main(int argc, char* arg[])
         			read(lfs,dir,sizeof(dirEnt));
                 		if(dir->inum==-1)
                 			continue;
-				printf("%s\n",dir->name,dir->inum);
+				printf("%s/\n",dir->name,dir->inum);
 			}
 		}
 	}
 	else if(strcmp(cmd,"cat")==0)
         {
                 dirEnt *dir=malloc(sizeof(dirEnt));
-		int pointers=inodelevel->size/BLOCKSIZE;
+		int pointers1=inodelevel->size/BLOCKSIZE;
+		if(inodelevel->size%BLOCKSIZE!=0)
+			pointers1++;					
 		int find=0;
-		for(num_ptr=0;num_ptr<pointers;num_ptr++)
+		for(num_ptr=0;num_ptr<pointers1;num_ptr++)
 		{		
                 	j=lseek(lfs,0,SEEK_SET);
                 	j=lseek(lfs,inodelevel->ptr[num_ptr],SEEK_SET);
@@ -207,9 +213,9 @@ int main(int argc, char* arg[])
 					// file contenet is at data
 				//	printf("\t Size %d",new->size);
 					int fileptrs;
-					pointers=new->size/BLOCKSIZE;
-					if(pointers==0)
-						pointers=1;
+					int pointers=new->size/BLOCKSIZE;
+					if(new->size%BLOCKSIZE!=0)
+						pointers++;
 					//printf("\nPointers %d",pointers);
 					for(fileptrs=0;fileptrs<pointers;fileptrs++)
 					{

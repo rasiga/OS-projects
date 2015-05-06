@@ -169,12 +169,33 @@ int main(int argc, char* arg[])
 			dirEnt *dir=malloc(sizeof(dirEnt));
 			j=lseek(lfs,0,SEEK_SET);
         		j=lseek(lfs,inodelevel->ptr[num_ptr],SEEK_SET);
+			dirEnt *entries[64];
+			for(i=0;i<64;i++)
+                        {
+				entries[i]=malloc(sizeof(dirEnt));
+                                read(lfs,entries[i],sizeof(dirEnt));
+                                //if(dir->inum==-1)
+                                 //       continue;
+
+                                //printf("%s\n",dir->name,dir->inum);
+                        }
+			//j=lseek(lfs,0,SEEK_SET);
+                        //j=lseek(lfs,inodelevel->ptr[num_ptr],SEEK_SET);
+                       
         		for(i=0;i<64;i++)
         		{
-        			read(lfs,dir,sizeof(dirEnt));
+        			//read(lfs,dir,sizeof(dirEnt));
+        			dir=entries[i];
                 		if(dir->inum==-1)
                 			continue;
-				printf("%s\n",dir->name,dir->inum);
+                       		inode *x=malloc(sizeof(inode));
+				j=lseek(lfs,inodes[dir->inum],SEEK_SET);
+				read(lfs,x,sizeof(inode));
+				
+				printf("%s",dir->name);
+				if(x->type==0)
+					printf("/");
+				printf("\n");
 			}
 		}
 	}
