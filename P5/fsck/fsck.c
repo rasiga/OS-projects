@@ -60,6 +60,7 @@ int main(int argc, char* arg[])
 	int size = st.st_blocks;
 	if(size!=sb->size)
 	{
+		//printf("Error!\n");
 		//printf("\nInvalid size is %d should be %d",sb->size,size);
 		sb->size=size;
 		//sb->nblocks=st.st_blocks;      // Number of data blocks
@@ -75,12 +76,12 @@ int main(int argc, char* arg[])
 
 		//printf("\n1");
 	}
+	if(sb->ninodes > size || sb->nblocks > size)
+	{
+		printf("Error!\n");
+	}	
 	int inodeblocks=sb->ninodes/8;
-	//if(sb->ninodes%8!=0)
-	//{
-	//	printf("\nadded one");
-		inodeblocks++; // because ther is one empty block
-	//}
+	inodeblocks++; // because ther is one empty block
 	//printf("\nnum of blocks used to store the inode list %d",inodeblocks);
 	if(!(sb->size>inodeblocks+1))
 	{
@@ -160,7 +161,8 @@ int main(int argc, char* arg[])
 				{
 					//parent[dir->inum]=i;
 					n=(read(ffs,dir,sizeof(struct dirent)));
-					//noe that you have read the dir entry, increment the nlinks for that dir->inum
+					/**********************Counting the links for each inum**************/
+					//now that you have read the dir entry, increment the nlinks for that dir->inum
 					if(strcmp(dir->name,".")!=0 && strcmp(dir->name,"..")!=0 && dir->name!=NULL) //other than the . and .. entries
 					{
 						links[dir->inum]++;
@@ -213,12 +215,13 @@ int main(int argc, char* arg[])
 					if(dir->inum==0)
 						continue;
 			//		printf("\n %d entry ROOT INO %d INUM %d NAME %s ",k,i,dir->inum,dir->name);
-					links[dir->inum]++;
+					
 					//parent[dir->inum]=i; //set the parent of all children
 							
 				}
 
         		}
+			/********************Go to the place pointed by indirect pointer*******************************************/
 			n=lseek(ffs,imap[i]->addrs[12]*BSIZE,SEEK_SET);
 			if(imap[i]->addrs[12]==0)
 				continue;
@@ -241,8 +244,31 @@ int main(int argc, char* arg[])
 
 		}
 	}
-
-
+	
+	/***************Go through the inodes to see if the links count matches with the calculated one; if not change it**************/
+	for(i=0;i<sb->ninodes;i++)
+	{
+		printf("\n Type %d Calculated nlink for inode %d is: %d, the one found in the inode is %d",imap[i]->type,i,links[i],imap[i]->nlink);
+		//link count for a dir is 1
+		if((imap[i]->type==1 || imap[i]->type==3) && imap[i]->nlink!=1)
+			imap[i]->nlink = 1;
+		//change the nlink for a file it doesnt match the one calculated
+		if(imap[i]->type==2)
+		{	if(imap[i]->nlink != links[i])
+			{
+				printf("\n the linkcount doesn't match, changing it");
+				imap[i]->nlink = links[i];		
+			}
+		}
+	}
+	/************rewrite inode with correct link count**************/
+	n=lseek(ffs,2*BSIZE,SEEK_SET);
+        for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
+        {
+		//if(imap[i]->type==2)
+                	n=(write(ffs,imap[i],sizeof(struct dinode)));
+        }
+	/**********************Checking the no referenced inode and 
 	
 	 for(i=0;i<sb->ninodes;i++)
         {
