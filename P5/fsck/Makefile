@@ -1,2 +1,2 @@
 all: fsck.c
-	gcc -o fsck fsck.c fs.h 
+	gcc -o myfsck fsck.c fs.h 
