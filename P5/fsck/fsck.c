@@ -139,6 +139,7 @@ int main(int argc, char* arg[])
 	//printf("\n%d DIR",sizeof(struct dirent));
 	int links[sb->ninodes];
 	int parent[sb->ninodes];
+	//initializing the links and parent variables
 	for(i=0;i<sb->ninodes;i++)
 	{
 		links[i]=0;
@@ -159,6 +160,11 @@ int main(int argc, char* arg[])
 				{
 					//parent[dir->inum]=i;
 					n=(read(ffs,dir,sizeof(struct dirent)));
+					//noe that you have read the dir entry, increment the nlinks for that dir->inum
+					if(strcmp(dir->name,".")!=0 && strcmp(dir->name,"..")!=0 && dir->name!=NULL) //other than the . and .. entries
+					{
+						links[dir->inum]++;
+					}
 					if(! ((j==0 && k==0) ||( j==0 && k==1) ) ) // if it is not . and ..
 						parent[dir->inum]=i;
 					if(j ==0 && k==0)
