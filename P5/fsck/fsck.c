@@ -51,7 +51,7 @@ int main(int argc, char* arg[])
 	//printf("\n size %u block %u num_inodes %u",sb->size,sb->nblocks,sb->ninodes);
 	if(sb->ninodes%IPB!=0)
 	{
-		printf("\nCorrupt file");
+		printf("\nError\n");
 		return -1;
 	}
 	//printf("\n sb->nblocks is %d",sb->nblocks);
@@ -79,6 +79,7 @@ int main(int argc, char* arg[])
 	if(sb->ninodes > size || sb->nblocks > size)
 	{
 		printf("Error!\n");
+		return -1;
 	}	
 	int inodeblocks=sb->ninodes/8;
 	inodeblocks++; // because ther is one empty block
@@ -140,15 +141,21 @@ int main(int argc, char* arg[])
 	//printf("\n%d DIR",sizeof(struct dirent));
 	int links[sb->ninodes];
 	int parent[sb->ninodes];
+	int level[sb->ninodes];
+	int exists[sb->ninodes];
 	//initializing the links and parent variables
 	for(i=0;i<sb->ninodes;i++)
 	{
 		links[i]=0;
 		parent[i]=0;
+		exists[i]=0;
 	}
 	int lseekpos;
 	for(i=0;i<sb->ninodes;i++)
 	{
+		//set the exixsts to 2 for valid inodes
+		if(imap[i]->type!=0)
+			exists[i]=2;
 		if(imap[i]->type==1)
 		{
 		//	printf("\nAt dir %d",i);
@@ -330,6 +337,11 @@ int main(int argc, char* arg[])
 	
 	}
 //	printf("\nNumber of num bits set = %d",sum);
+
+	/****************Checking the nodes that are not referenced (ie., not reachable from the root)*************/
+	struct dinode *currinode = imap[1];
+	int inodes_seen[sb->ninodes];
+	 
 	return 1;
 
 
