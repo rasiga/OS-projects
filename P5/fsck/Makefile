@@ -1,2 +1,4 @@
 all: fsck.c
-	gcc -o myfsck fsck.c fs.h 
+	gcc -o myfsck fsck.c fs.h
+clean:
+	rm myfsck 

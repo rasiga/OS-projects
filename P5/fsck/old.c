@@ -28,8 +28,6 @@ int count(unsigned int n)
 int main(int argc, char* arg[])
 {
 	int n,j;
-	//int links_changed[sb->inodes];
-	//int linkchanges=0;
 	int inodesize=sizeof(struct dinode);
 	// make sure format is right
 	if(argc!=2)
@@ -164,6 +162,7 @@ int main(int argc, char* arg[])
 	int level[sb->ninodes];
 	int exists[sb->ninodes];
 	int inodes_seen[sb->ninodes];
+	char *names[sb->ninodes];
 	//initializing the links and parent variables
 	for(i=0;i<sb->ninodes;i++)
 	{
@@ -200,6 +199,8 @@ int main(int argc, char* arg[])
 					{
 						links[dir->inum]++;
 						//printf("\n%s");
+						 names[dir->inum]=malloc(strlen(dir->name));
+	                                        strcpy(names[dir->inum],dir->name);
 
 
 					}
@@ -250,7 +251,7 @@ int main(int argc, char* arg[])
                                         }
 					if(dir->inum==0)
 						continue;
-				//	printf("\n INUM %d NAME %s ",dir->inum,dir->name);
+					printf("\n INUM %d NAME %s ",dir->inum,dir->name);
 
 					if(strcmp(dir->name,"lost+found")==0)
 					{
@@ -276,7 +277,9 @@ int main(int argc, char* arg[])
                                         n=(read(ffs,dir,sizeof(struct dirent)));
                                         if(dir->inum==0)
                                                 continue;
-                                  //      printf("\n INUM %d NAME %s ",dir->inum,dir->name);
+                                        printf("\n INUM %d NAME %s ",dir->inum,dir->name);
+					names[dir->inum]=malloc(strlen(dir->name));
+					strcpy(names[dir->inum],dir->name);
 					links[dir->inum]++;
                                 }
 
@@ -296,7 +299,7 @@ int main(int argc, char* arg[])
 		if(imap[i]->type==2)
 		{	if(imap[i]->nlink != links[i])
 			{
-				printf("\n the linkcount doesn't match for %d, changing it %d %d",i,imap[i]->nlink,links[i]);
+				printf("\n the linkcount doesn't match, changing it");
 				imap[i]->nlink = links[i];		
 			}
 		}
@@ -439,14 +442,14 @@ int main(int argc, char* arg[])
 	}
 	//n=lseek(ffs,lost_found*BSIZE,SEEK_SET);
 	i=lost_found;
-	//printf("\nlost+found has");
+	printf("\nlost+found has");
 	int lfentry;
 	for(j=0;j<12;j++)
         {
                                 if(imap[i]->addrs[j]==0)
                                         continue;
                                 lseekpos=lseek(ffs,imap[i]->addrs[j]*BSIZE,SEEK_SET);
-				//printf("\n LSEEK at %d",lseekpos);
+				printf("\n LSEEK at %d",lseekpos);
 				int pos=lseekpos;
                                 for(k=0;k<BSIZE/sizeof(struct dirent);k++)
                                 {
@@ -454,66 +457,29 @@ int main(int argc, char* arg[])
 					pos+=n;
                                         if(dir->inum==0)
                                         {
-						//printf("\t%d ",pos);
+						printf("\t%d ",pos);
 						lfentry=lseek(ffs,pos-sizeof(struct dirent),SEEK_SET);
 						continue;	
 					}
-				//	printf("\n INUM %d NAME %s ",dir->inum,dir->name);
+					printf("\n INUM %d NAME %s ",dir->inum,dir->name);
                                 }
 
         }
-	//printf("\n Lfentry at %d",lfentry);
+	printf("\n Lfentry at %d",lfentry);
 	lseekpos=lseek(ffs,lfentry,SEEK_SET);
-	printf("\nsize : %d",imap[lost_found]->size);
+	
 	for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
         {
 		if(exists[i]==2)
 		{
-                	printf("\n Imap %d can't be traversed from root",i);
-			dir->inum=i;
-			strcpy(dir->name,"lost1");
-			write(ffs,dir,sizeof(struct dirent));
-			imap[lost_found]->size+=sizeof(struct dirent);
-
+                	printf("\n Imap %d %s can't be traversed from root",i,names[i]);
+			//dir->inum=i;
+			//strcpy(dir->name,names[i]);
+			//write(ffs,dir,sizeof(struct dirent));
 		}
         }
 	
 
-	i=lost_found;
-        printf("\nlost+found has");
-        for(j=0;j<12;j++)
-        {
-                                if(imap[i]->addrs[j]==0)
-                                        continue;
-                                lseekpos=lseek(ffs,imap[i]->addrs[j]*BSIZE,SEEK_SET);
-                                for(k=0;k<BSIZE/sizeof(struct dirent);k++)
-                                {
-                                        n=(read(ffs,dir,sizeof(struct dirent)));
-                                        if(dir->inum==0)
-                                        {
-                                                continue;
-                                        }
-                                        printf("\n INUM %d NAME %s ",dir->inum,dir->name);
-                                }
-
-        }
-	/************rewrite inode with correct link count**************/
-        n=lseek(ffs,2*BSIZE,SEEK_SET);
-       
-	 for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
-        {
- 
-                n=(write(ffs,imap[i],sizeof(struct dinode)));
-        }
-	/*n=lseek(ffs,2*BSIZE,SEEK_SET);
-	for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
-        {
-
-                n=(read(ffs,imap[i],sizeof(struct dinode)));
-        }
-	printf("\nsize : %d",imap[lost_found]->size);
-	*/
-	printf("\n sb->ninodes %d ",sb->ninodes);
 	 
 	return 1;
 
