@@ -177,9 +177,12 @@ int main(int argc, char* arg[])
 
 
 	int blocks[bitindex];
+	int blocks_by[bitindex];
 	for(i=0;i<bitindex;i++)
+	{
 		blocks[i] = 0; 
-
+		blocks_by[i] = 0; 
+	}
 	struct dinode *temp=malloc(sizeof(struct dinode));
 	n=lseek(ffs,2*BSIZE,SEEK_SET);
 	struct dinode *imap[sb->ninodes];
@@ -226,14 +229,22 @@ int main(int argc, char* arg[])
 		//	printf(" %d",imap[i]->addrs[j]);
 			if(imap[i]->addrs[j]==0)
 				continue;
+			if(imap[i]->addrs[j] > sb->nblocks || imap[i]->addrs[j]< (2+inodeblocks) )
+			{	
+				imap[i]->type=0;
+				continue;
+			}
 			if(blocks[imap[i]->addrs[j]] == 1)
 			{
 				printf("\nrepeated");
-			
+				//imap[i]->type=0;
+			//	imap[blocks_by[imap[i]->addrs[j]]]->type=0;
+				
 			}
 			else
 			{
 				 blocks[imap[i]->addrs[j]]=1;
+				 blocks_by[imap[i]->addrs[j]]=i;
 			}
 			totalblocks++;
 		}
@@ -253,12 +264,28 @@ int main(int argc, char* arg[])
 			for(j=0;j<BSIZE/sizeof(uint);j++)
 			{
 			//	printf("\n Indirect %d",data[j]);
+				if( data[j]!=0 && ( data[j] > sb->nblocks || data[j] < (2+inodeblocks) ) )
+				{	
+					imap[i]->type=0;
+					continue;
+				}
+			
 				if(data[j]!=0)
 				{
 					totalblocks++;
 					if(blocks[data[j]]==1)
+					{
 						printf("\nrepeated");
-					blocks[data[j]]=1;
+					//	imap[i]->type=0;
+					//	imap[blocks_by[data[j]]]->type=0;
+
+					}
+					else
+					{
+						blocks[data[j]]=1;
+						blocks_by[data[j]]=i;
+
+					}
 				}
 			}
 
@@ -313,6 +340,7 @@ int main(int argc, char* arg[])
 	int level[sb->ninodes];
 	int exists[sb->ninodes];
 	int inodes_seen[sb->ninodes];
+	//reint inodes_seen_by[sb->ninodes];
 	//initializing the links and parent variables
 	for(i=0;i<sb->ninodes;i++)
 	{
@@ -320,6 +348,7 @@ int main(int argc, char* arg[])
 		parent[i]=0;
 		exists[i]=0;
 		inodes_seen[i]=0;
+		//inodes_seen_by[i]=0;
 	}
 	int lseekpos;
 	int lost_found=0;
@@ -333,7 +362,7 @@ int main(int argc, char* arg[])
 		}
 		if(imap[i]->type==1)
 		{
-	//		printf("\nAt dir %d",i);
+			//printf("\nAt dir %d",i);
 			for(j=0;j<12;j++)
 			{
 				if(imap[i]->addrs[j]==0)
@@ -425,7 +454,7 @@ int main(int argc, char* arg[])
                                         n=(read(ffs,dir,sizeof(struct dirent)));
                                         if(dir->inum==0)
                                                 continue;
-                                  //      printf("\n INUM %d NAME %s ",dir->inum,dir->name);
+                             //           printf("\n INUM %d NAME %s ",dir->inum,dir->name);
 					links[dir->inum]++;
                                 }
 
@@ -547,6 +576,7 @@ int main(int argc, char* arg[])
 				for(k=0;k<BSIZE/sizeof(struct dirent);k++)
 				{
 					n=(read(ffs,dir,sizeof(struct dirent)));
+				
 					if(dir->inum==0)
 						continue;
 	//				printf("\n INUM %d NAME %s ",dir->inum,dir->name);
@@ -629,7 +659,7 @@ int main(int argc, char* arg[])
 		if(exists[i]==2)
 		{
 			struct dirent x;
-                	printf("\n Imap %d can't be traversed from root",i);
+         //       	printf("\n Imap %d can't be traversed from root",i);
 			x.inum=i;
 			strcpy(x.name,"lost");
 			write(ffs,&x,sizeof(struct dirent));
@@ -637,6 +667,106 @@ int main(int argc, char* arg[])
 
 		}
         }
+//	printf("\n---------------------------------------------------------------------------------");
+
+	/**  Need to remove directory entries  **/
+	struct dirent *directories[BSIZE/sizeof(struct dirent)];
+	for(k=0;k<BSIZE/sizeof(struct dirent);k++)
+	{
+		directories[k]=calloc(1,sizeof(struct dirent));
+	}
+				
+	for(i=0;i<sb->ninodes;i++)
+	{
+		
+		if(imap[i]->type==1)
+		{
+			printf("\nAt dir %d",i);
+			for(j=0;j<12;j++)
+			{
+				if(imap[i]->addrs[j]==0)
+					continue;
+				int dirindex=0;
+        			lseekpos=lseek(ffs,imap[i]->addrs[j]*BSIZE,SEEK_SET);
+				for(k=0;k<BSIZE/sizeof(struct dirent);k++)
+				{
+					n=(read(ffs,dir,sizeof(struct dirent)));
+					if(dir->inum==0)
+						continue;
+					if(imap[dir->inum]->type!=0)
+					{
+						directories[dirindex]->inum=dir->inum;
+						strcpy(directories[dirindex]->name,dir->name);
+					//	printf("\n %s -  %s  ",dir->name,directories[dirindex]->name);
+						dirindex++;
+					}
+					
+
+				}
+				for(k=dirindex;k<BSIZE/sizeof(struct dirent);k++)
+				{
+					directories[dirindex]->inum=0;
+					strcpy(directories[dirindex++]->name,"");
+
+					
+				}
+				lseek(ffs,imap[i]->addrs[j]*BSIZE,SEEK_SET);
+				for(k=0;k<BSIZE/sizeof(struct dirent);k++)
+				{
+					printf("\n INUM %d NAME %s ",directories[k]->inum,directories[k]->name);
+					n=(write(ffs,directories[k],sizeof(struct dirent)));
+					//free(directories[k]);
+				}
+				
+        		}
+			n=lseek(ffs,imap[i]->addrs[12]*BSIZE,SEEK_SET);
+			if(imap[i]->addrs[12]==0)
+				continue;
+			n=(read(ffs,addr,sizeof(BSIZE)));
+			for(j=0;j<BSIZE/sizeof(uint);j++)
+                        {
+				if(addr[j]==0)
+					continue;
+				struct dirent *directories[BSIZE/sizeof(struct dirent)];
+				for(k=0;k<BSIZE/sizeof(struct dirent);k++)
+				{
+					directories[k]=calloc(1,sizeof(struct dirent));
+				}
+				int dirindex=0;
+        			
+				lseekpos=lseek(ffs,addr[j]*BSIZE,SEEK_SET);
+				for(k=0;k<BSIZE/sizeof(struct dirent);k++)
+                                {
+                                        n=(read(ffs,dir,sizeof(struct dirent)));
+                                        if(dir->inum==0)
+                                                continue;
+					if(imap[dir->inum]->type!=0)
+					{
+						directories[dirindex]->inum=dir->inum;
+						strcpy(directories[dirindex++]->name,dir->name);
+					}
+			
+//					printf("\n INUM %d NAME %s ",directories[dirindex-1].inum,directories[dirindex-1].name);
+                                }
+				for(k=dirindex;k<BSIZE/sizeof(struct dirent);k++)
+				{
+					directories[dirindex]->inum=0;
+					strcpy(directories[dirindex++]->name,"");
+
+					
+				}
+				lseek(ffs,addr[j]*BSIZE,SEEK_SET);
+				for(k=0;k<BSIZE/sizeof(struct dirent);k++)
+				{
+					//printf("\n INUM %d NAME %s ",directories[k].inum,directories[k].name);
+
+					n=(write(ffs,directories[k],sizeof(struct dirent)));
+				//	free(directories[k]);
+				}
+			}
+
+		}
+	}
 	
 //	/*Checking if written in lost+found
 /*	i=lost_found;
@@ -665,14 +795,15 @@ int main(int argc, char* arg[])
 		blocks[i]=bitmap[i];
 	}
 	int matching=1;
-	for( i = 0 ;i < bitindex ; i++ )
+	/*for( i = 0 ;i < bitindex ; i++ )
 	{
+		printf("\n %x == %x ",bitmap[i],blocks[i]);
 		if(bitmap[i] != blocks[i] )
 		{
-			printf("\n not matching at %d",i);
+			//printf("\nnot matching at %d",i);
 			matching=0;
 		}
-	}
+	}*/
 
 	uint *nbyte=malloc(BSIZE);
         //nbytes=n;
@@ -763,13 +894,17 @@ int main(int argc, char* arg[])
 
 	}
 	//printf("\nchecking if byte is proper");
-	/*for(i=0;i<nbytes;i++)
+	for(i=0;i<nbytes;i++)
 	{
-		printf("\n%x  = %x",bytes[i],nbyte[i]);
-	}*/
+		//printf("\n%x  = %x",bytes[i],nbyte[i]);
+		if(bytes[i]!=nbyte[i])
+		{
+			matching=0;
+		}
+	}
 	if(matching==0)
 	{
-		printf("\n Going to change");
+		//printf("\n Going to change");
 		n=lseek(ffs,2*BSIZE+inodeblocks*BSIZE,SEEK_SET);
 	        n=write(ffs,nbyte,BSIZE);
        
