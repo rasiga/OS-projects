@@ -594,6 +594,7 @@ int main(int argc, char* arg[])
 	i=lost_found;
 	//printf("\nlost+found has");
 	int lfentry;
+	int f=0;
 	for(j=0;j<12;j++)
         {
                                 if(imap[i]->addrs[j]==0)
@@ -611,28 +612,34 @@ int main(int argc, char* arg[])
 						lfentry=lseek(ffs,pos-sizeof(struct dirent),SEEK_SET);
 						continue;	
 					}
+					f++;
 				//	printf("\n INUM %d NAME %s ",dir->inum,dir->name);
                                 }
 
         }
-	//printf("\n Lfentry at %d",lfentry);
+	//printf("\n count %d",f);
+	int blockno= BSIZE/sizeof(uint);
+	//printf("\n which addr %d %d ",blockno,(f/blockno));
 	lseekpos=lseek(ffs,lfentry,SEEK_SET);
+	lseekpos=lseek(ffs,imap[i]->addrs[(f/blockno)]*BSIZE+f*sizeof(struct dirent),SEEK_SET);
+
 	//printf("\nsize : %d",imap[lost_found]->size);
 	for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
         {
 		if(exists[i]==2)
 		{
-   //             	printf("\n Imap %d can't be traversed from root",i);
-			dir->inum=i;
-			strcpy(dir->name,"lost");
-			write(ffs,dir,sizeof(struct dirent));
+			struct dirent x;
+                	printf("\n Imap %d can't be traversed from root",i);
+			x.inum=i;
+			strcpy(x.name,"lost");
+			write(ffs,&x,sizeof(struct dirent));
 			imap[lost_found]->size+=sizeof(struct dirent);
 
 		}
         }
 	
-	/*Checking if written in lost+found
-	i=lost_found;
+//	/*Checking if written in lost+found
+/*	i=lost_found;
         printf("\nlost+found has");
         for(j=0;j<12;j++)
         {
@@ -650,65 +657,124 @@ int main(int argc, char* arg[])
                                 }
 
         }
-	*/
+//	*/
 
 	//printf("\nChecking Mapping");
 	for(i=0;i<=(3+inodeblocks+1);i++)
 	{
 		blocks[i]=bitmap[i];
 	}
+	int matching=1;
 	for( i = 0 ;i < bitindex ; i++ )
 	{
 		if(bitmap[i] != blocks[i] )
 		{
 			printf("\n not matching at %d",i);
+			matching=0;
 		}
 	}
-	int *bitor=malloc(BSIZE);
 
-/*
-	for( i = 0 ; i <  ; i++ )
-	{
+	uint *nbyte=malloc(BSIZE);
+        //nbytes=n;
 	
-			bitmap[bitindex++]= (byte & 1);
-                        bitmap[bitindex++]= (byte >> 1) & 1;
-                        bitmap[bitindex++]= (byte >> 2) & 1;
-                        bitmap[bitindex++]= (byte >> 3) & 1;
-                        bitmap[bitindex++]= (byte >> 4) & 1;
-                        bitmap[bitindex++]= (byte >> 5) & 1;
-                        bitmap[bitindex++]= (byte >> 6) & 1;
-                        bitmap[bitindex++]= (byte >> 7) & 1;
 
-                        bitmap[bitindex++]= (byte >> 8) & 1;
-                        bitmap[bitindex++]= (byte >> 9) & 1;
-                        bitmap[bitindex++]= (byte >> 10) & 1;
-                        bitmap[bitindex++]= (byte >> 11) & 1;
-                        bitmap[bitindex++]= (byte >> 12) & 1;
-                        bitmap[bitindex++]= (byte >> 13) & 1;
-                        bitmap[bitindex++]= (byte >> 14) & 1;
-                        bitmap[bitindex++]= (byte >> 15) & 1;
+//	int *bitor=malloc(BSIZE);
+	
+	int newindex=0;
+	for( i = 0 ; i < nbytes  ; i++ )
+	{
+			nbyte[i]=0;
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x1;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x2;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x4;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x8;				
 
 
-                        bitmap[bitindex++]= (byte >> 16) & 1;
-                        bitmap[bitindex++]= (byte >> 17) & 1;
-                        bitmap[bitindex++]= (byte >> 18) & 1;
-                        bitmap[bitindex++]= (byte >> 19) & 1;
-                        bitmap[bitindex++]= (byte >> 20) & 1;
-                        bitmap[bitindex++]= (byte >> 21) & 1;
-                        bitmap[bitindex++]= (byte >> 22) & 1;
-                        bitmap[bitindex++]= (byte >> 23) & 1;
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x10;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x20;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x40;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x80;				
 
 
-                        bitmap[bitindex++]= (byte >> 24)& 1;
-                        bitmap[bitindex++]= (byte >> 25) & 1;
-                        bitmap[bitindex++]= (byte >> 26) & 1;
-                        bitmap[bitindex++]= (byte >> 27) & 1;
-                        bitmap[bitindex++]= (byte >> 28) & 1;
-                        bitmap[bitindex++]= (byte >> 29) & 1;
-                        bitmap[bitindex++]= (byte >> 30) & 1;
-                        bitmap[bitindex++]= (byte >> 31) & 1;
+
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x100;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x200;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x400;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x800;				
+
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x1000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x2000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x4000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x8000;				
+
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x10000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x20000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x40000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x80000;				
+
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x100000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x200000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x400000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x800000;				
+
+
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x1000000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x2000000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x4000000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x8000000;				
+
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x1000000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x2000000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x4000000;				
+			if(blocks[newindex++]==1)
+				nbyte[i]= nbyte[i] | 0x8000000;				
+
+
 	}
-*/
+	//printf("\nchecking if byte is proper");
+	/*for(i=0;i<nbytes;i++)
+	{
+		printf("\n%x  = %x",bytes[i],nbyte[i]);
+	}*/
+	if(matching==0)
+	{
+		printf("\n Going to change");
+		n=lseek(ffs,2*BSIZE+inodeblocks*BSIZE,SEEK_SET);
+	        n=write(ffs,nbyte,BSIZE);
+       
+	}
+
 
 	/************rewrite inode with correct changed imap size**************/
         n=lseek(ffs,2*BSIZE,SEEK_SET);
