@@ -27,7 +27,7 @@ int count(unsigned int n)
 }
 int main(int argc, char* arg[])
 {
-	int n,j,i;
+	int n,j,i,k;
 	//int links_changed[sb->inodes];
 	//int linkchanges=0;
 	int inodesize=sizeof(struct dinode);
@@ -100,7 +100,8 @@ int main(int argc, char* arg[])
         //printf("\n %d Byte is sizeof(int) is %d\n",n,sizeof(int));
         int sum=0;
         n=n/sizeof(int);
-	int bitmap[100000];
+	int tblocks=0;
+	int bitmap[10000];
 	int bitindex=0;
 
         for(i=0;i<n;i++)
@@ -108,7 +109,7 @@ int main(int argc, char* arg[])
                         unsigned int byte=bytes[i];
                         sum+=count(byte);
 			
-                        printf(" %x",byte);
+                  //      printf(" %x",byte);
 			bitmap[bitindex++]= (byte & 1);
 			bitmap[bitindex++]= (byte >> 1) & 1;
                         bitmap[bitindex++]= (byte >> 2) & 1;
@@ -149,7 +150,7 @@ int main(int argc, char* arg[])
 
 
                        
-			printf(" %d\n",bitindex);
+		//	printf(" %d\n",bitindex);
 
         }
         printf("\nNumber of num bits set = %d",sum);
@@ -161,43 +162,51 @@ int main(int argc, char* arg[])
                         bitmap[bitindex++]=(byte & 0x4) >> 2;
                         bitmap[bitindex++]=(byte & 0x8) >> 3;
 			
-        }*/
-	for(i=0;i<bitindex;i++)
-	{
-		printf("\n i %d bit %d",i,bitmap[i]);
-	}
+        }
+//	for(i=0;i<bitindex;i++)
+//	{
+//		printf("\n i %d bit %d",i,bitmap[i]);
+//	} 
+	*/
 
 	int maxsize = 1 + inodeblocks + (sb->ninodes - sum);  // RASIGA WILL NOT FORGET 421=totalblocks changed 421 to sum
-               
+        //printf("\n SUM IS %d",sum);
 
 
 
-
+	int blocks[sb->nblocks];
+	for(i=0;i<sb->nblocks;i++)
+		blocks[i] = 0; 
 
 	struct dinode *temp=malloc(sizeof(struct dinode));
 	n=lseek(ffs,2*BSIZE,SEEK_SET);
 	struct dinode *imap[sb->ninodes];
 	//int i;
 	int totalblocks=0;
-	int indirect[sb->ninodes];
-	indirect[0]=0;
+	uint indirect[sb->ninodes];
+	for(i=0;i<sb->ninodes;i++)
+		indirect[i]=0;
 	for(i=0; i<sb->ninodes; i++)
 	{
 		imap[i]=malloc(sizeof(struct dinode));
 		n=(read(ffs,imap[i],sizeof(struct dinode)));
+	
 		/********************After calculating totalblocks****************************/
-		//checking valid inode type
-		if(imap[i]->type!=0 && imap[i]->type!=1 && imap[i]->type!=2 && imap[i]->type!=3)		
+		
+		//checking valid inode type	
+		if( imap[i]->type!=0 && imap[i]->type!=1 && imap[i]->type!=2 && imap[i]->type!=3 )		
 		{
 			printf("\n Invalid inode");
 			imap[i]->type = 0; //clear the inode
 		}
+
 		//checking the size field in inode
 		if(imap[i]->size > maxsize)
 		{
 			printf("\n Invalid size in inode");
 			imap[i]->type = 0;
 		}
+
 		//if no file is pointing to this inode, invalidate it
 		if(imap[i]->nlink == 0)
 			imap[i]->type=0;
@@ -206,43 +215,86 @@ int main(int argc, char* arg[])
 	//	if(i==0)
 	//		continue;
 		//printf("\nInode %d:",i);
+		
+		if(imap[i]->type==0)
+			continue;
+		
 		for(j=0;j<13;j++)		
 		{
-			if(imap[i]->addrs[j]!=0)
+		//	printf(" %d",imap[i]->addrs[j]);
+			if(imap[i]->addrs[j]==0)
+				continue;
+			if(blocks[imap[i]->addrs[j]] == 1)
 			{
-				totalblocks++;
+				printf("\nrepeated");
 			}
+			else
+			{
+				 blocks[imap[i]->addrs[j]]=1;
+			}
+			totalblocks++;
 		}
 		indirect[i]=imap[i]->addrs[12];
-		
+		//printf("\n Indirect pointer of %d is: %d",i,indirect[i]);
 	}
-	uint *ind_addr=malloc(sizeof(BSIZE));
-	for(i=0;i<sb->ninodes;i++)
+	//printf("\n Number of direct addresses %d",totalblocks);
+	uint ind_addr;
+	uint *data=malloc(sizeof(BSIZE));
+	for(i=0; i<sb->ninodes; i++)
         {
+		
 		if(indirect[i]!=0)
 		{
-                	n=lseek(ffs,indirect[i]*BSIZE,SEEK_SET);
-                	n=read(ffs,ind_addr,sizeof(BSIZE));
-			printf("\n size is %d",n);
-                	for(j=0;j<BSIZE/sizeof(uint);j++)
-                	{
-                        	if(ind_addr[j]!=0)
+			n=lseek(ffs,indirect[i]*BSIZE,SEEK_SET);
+			n=read(ffs,data,BSIZE);
+			for(j=0;j<BSIZE/sizeof(uint);j++)
+			{
+			//	printf("\n Indirect %d",data[j]);
+				if(data[j]!=0)
 				{
-                                	totalblocks++;
+					totalblocks++;
+					blocks[data[j]]=1;
 				}
-                	}
+			}
+
+                /*	n=lseek(ffs,indirect[i]*BSIZE,SEEK_SET);
+			for(k=0;k<BSIZE/sizeof(uint);k++)
+			{
+                		n=read(ffs,ind_addr,sizeof(uint));
+				//printf("\n size is %d",n);
+                		//for(j=0;j<BSIZE/sizeof(uint);j++)
+                //		printf(" %d",ind_addr);
+				{
+                        		if(ind_addr == 0)
+						continue;
+                                	totalblocks++;
+					if(blocks[ind_addr] == 1)
+                        		{
+                                		printf("\nrepeated");
+                        		}
+                        		else
+                        		{
+                                		 blocks[ind_addr]=1;
+                        		}
+				}
+
+                	}*/
 		}
 
         }
+
 	printf("\nNum blocks traversing the inode %d",totalblocks);
-
-
+	for(i=0;i<sb->nblocks;i++)
+	{
+	//	printf("\n i %d index %d",i,blocks[i]);
+		tblocks+=blocks[i];
+	}
+	printf("\n sum is %d",tblocks);
 	n=lseek(ffs,2*BSIZE,SEEK_SET);
 	for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
         {
                 n=(write(ffs,imap[i],sizeof(struct dinode)));
         }
-	int k;
 	struct dirent *dir=malloc(sizeof(struct dirent));
 	int *addr=malloc(sizeof(BSIZE));
 	//printf("\n%d DIR",sizeof(struct dirent));
