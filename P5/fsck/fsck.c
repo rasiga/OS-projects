@@ -100,6 +100,7 @@ int main(int argc, char* arg[])
         //printf("\n %d Byte is sizeof(int) is %d\n",n,sizeof(int));
         int sum=0;
         n=n/sizeof(int);
+	int nbytes=n;
 	int tblocks=0;
 	int bitmap[10000];
 	int bitindex=0;
@@ -153,7 +154,8 @@ int main(int argc, char* arg[])
 		//	printf(" %d\n",bitindex);
 
         }
-        printf("\nNumber of num bits set = %d",sum);
+        //printf("\nNumber of num bits set = %d",sum);
+	int bitsmapped=sum;
 	/*for(i=0;i<n;i++)
         {
                         unsigned int byte=bytes[i];
@@ -174,8 +176,8 @@ int main(int argc, char* arg[])
 
 
 
-	int blocks[sb->nblocks];
-	for(i=0;i<sb->nblocks;i++)
+	int blocks[bitindex];
+	for(i=0;i<bitindex;i++)
 		blocks[i] = 0; 
 
 	struct dinode *temp=malloc(sizeof(struct dinode));
@@ -227,6 +229,7 @@ int main(int argc, char* arg[])
 			if(blocks[imap[i]->addrs[j]] == 1)
 			{
 				printf("\nrepeated");
+			
 			}
 			else
 			{
@@ -253,6 +256,8 @@ int main(int argc, char* arg[])
 				if(data[j]!=0)
 				{
 					totalblocks++;
+					if(blocks[data[j]]==1)
+						printf("\nrepeated");
 					blocks[data[j]]=1;
 				}
 			}
@@ -283,13 +288,18 @@ int main(int argc, char* arg[])
 
         }
 
-	printf("\nNum blocks traversing the inode %d",totalblocks);
+	//printf("\nNum blocks traversing the inode %d",totalblocks);
 	for(i=0;i<sb->nblocks;i++)
 	{
 	//	printf("\n i %d index %d",i,blocks[i]);
 		tblocks+=blocks[i];
 	}
-	printf("\n sum is %d",tblocks);
+
+	if(bitsmapped == (tblocks+3+inodeblocks+1))
+	{
+		printf("\n traversal not matching inode");
+	}
+	//printf("\n sum is %d",tblocks);
 	n=lseek(ffs,2*BSIZE,SEEK_SET);
 	for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
         {
@@ -642,9 +652,67 @@ int main(int argc, char* arg[])
         }
 	*/
 
+	//printf("\nChecking Mapping");
+	for(i=0;i<=(3+inodeblocks+1);i++)
+	{
+		blocks[i]=bitmap[i];
+	}
+	for( i = 0 ;i < bitindex ; i++ )
+	{
+		if(bitmap[i] != blocks[i] )
+		{
+			printf("\n not matching at %d",i);
+		}
+	}
+	int *bitor=malloc(BSIZE);
+
+/*
+	for( i = 0 ; i <  ; i++ )
+	{
+	
+			bitmap[bitindex++]= (byte & 1);
+                        bitmap[bitindex++]= (byte >> 1) & 1;
+                        bitmap[bitindex++]= (byte >> 2) & 1;
+                        bitmap[bitindex++]= (byte >> 3) & 1;
+                        bitmap[bitindex++]= (byte >> 4) & 1;
+                        bitmap[bitindex++]= (byte >> 5) & 1;
+                        bitmap[bitindex++]= (byte >> 6) & 1;
+                        bitmap[bitindex++]= (byte >> 7) & 1;
+
+                        bitmap[bitindex++]= (byte >> 8) & 1;
+                        bitmap[bitindex++]= (byte >> 9) & 1;
+                        bitmap[bitindex++]= (byte >> 10) & 1;
+                        bitmap[bitindex++]= (byte >> 11) & 1;
+                        bitmap[bitindex++]= (byte >> 12) & 1;
+                        bitmap[bitindex++]= (byte >> 13) & 1;
+                        bitmap[bitindex++]= (byte >> 14) & 1;
+                        bitmap[bitindex++]= (byte >> 15) & 1;
+
+
+                        bitmap[bitindex++]= (byte >> 16) & 1;
+                        bitmap[bitindex++]= (byte >> 17) & 1;
+                        bitmap[bitindex++]= (byte >> 18) & 1;
+                        bitmap[bitindex++]= (byte >> 19) & 1;
+                        bitmap[bitindex++]= (byte >> 20) & 1;
+                        bitmap[bitindex++]= (byte >> 21) & 1;
+                        bitmap[bitindex++]= (byte >> 22) & 1;
+                        bitmap[bitindex++]= (byte >> 23) & 1;
+
+
+                        bitmap[bitindex++]= (byte >> 24)& 1;
+                        bitmap[bitindex++]= (byte >> 25) & 1;
+                        bitmap[bitindex++]= (byte >> 26) & 1;
+                        bitmap[bitindex++]= (byte >> 27) & 1;
+                        bitmap[bitindex++]= (byte >> 28) & 1;
+                        bitmap[bitindex++]= (byte >> 29) & 1;
+                        bitmap[bitindex++]= (byte >> 30) & 1;
+                        bitmap[bitindex++]= (byte >> 31) & 1;
+	}
+*/
+
 	/************rewrite inode with correct changed imap size**************/
         n=lseek(ffs,2*BSIZE,SEEK_SET);
-       
+ //      printf("\n ENTRIES %d",bitindex);
 	 for(i=0;i<sb->ninodes;i++) // imap[i]s updated in place
         {
  
